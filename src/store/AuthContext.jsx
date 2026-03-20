@@ -53,8 +53,30 @@ export function AuthProvider({ children }) {
     setAuthUser(null);
   }, []);
 
+  // ── Update Auth User ───────────────────────────────────────────────────────
+  const updateAuthUser = useCallback((newUser) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(newUser));
+    setAuthUser(newUser);
+  }, []);
+
+  // ── Refresh User from Backend ──────────────────────────────────────────────
+  const refreshUser = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const user = await res.json();
+        updateAuthUser(user);
+      }
+    } catch (err) {
+      console.error('Refresh user error:', err);
+    }
+  }, [token, updateAuthUser]);
+
   return (
-    <AuthContext.Provider value={{ authUser, token, login, signup, logout }}>
+    <AuthContext.Provider value={{ authUser, token, login, signup, logout, updateAuthUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -4,7 +4,7 @@ import { useStore } from '../store/StoreContext.jsx';
 import { PLATFORMS, DIFFICULTIES, STATUSES, TOPICS, PATTERNS, TIME_COMPLEXITIES, SPACE_COMPLEXITIES } from '../store/data.js';
 import TagInput from './TagInput.jsx';
 
-export default function ProblemModal({ open, onClose, editProblem = null }) {
+export default function ProblemModal({ open, onClose, editProblem = null, initialData = null }) {
   const { addProblem, updateProblem, deleteProblem, authUser } = useStore();
   const [formData, setFormData] = useState({ ...initialState });
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -12,10 +12,11 @@ export default function ProblemModal({ open, onClose, editProblem = null }) {
   useEffect(() => {
     if (open) {
       if (editProblem) setFormData({ ...editProblem });
-      else setFormData({ ...initialState, dateSolved: new Date().toISOString().substring(0, 10), person: authUser?.name || 'User' });
+      else if (initialData) setFormData({ ...initialState, ...initialData, dateSolved: new Date().toISOString().substring(0, 10) });
+      else setFormData({ ...initialState, dateSolved: new Date().toISOString().substring(0, 10) });
     }
     setShowConfirmDelete(false);
-  }, [open, editProblem, authUser]);
+  }, [open, editProblem, initialData, authUser]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -205,6 +206,6 @@ export default function ProblemModal({ open, onClose, editProblem = null }) {
 
 const initialState = {
   name: '', link: '', platform: '', difficulty: '', topics: [], patterns: [],
-  status: 'Solved', person: '', dateSolved: '', timeComplexity: '', spaceComplexity: '',
+  status: 'Solved', dateSolved: '', timeComplexity: '', spaceComplexity: '',
   notes: '', revisionCount: 0, isPOTD: false
 };

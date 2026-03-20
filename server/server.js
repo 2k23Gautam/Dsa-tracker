@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 
@@ -12,6 +13,14 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/problems', require('./routes/problems'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/platforms', require('./routes/platforms'));
+app.use('/api/leetcode', require('./routes/leetcode'));
+
+// Serve uploaded profile images
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
+app.get('/api/test', (req, res) => res.json({ message: 'API is working' }));
 
 // Connect to MongoDB
 if (process.env.MONGO_URI) {
@@ -25,7 +34,6 @@ if (process.env.MONGO_URI) {
 const PORT = process.env.PORT || 5000;
 
 // Update to serve frontend in production
-const path = require('path');
 const distPath = path.join(__dirname, '../dist');
 
 // Serve static files from the Vite build directory

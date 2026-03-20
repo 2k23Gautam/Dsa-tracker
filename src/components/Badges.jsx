@@ -25,13 +25,15 @@ export function DifficultyBadge({ difficulty }) {
   );
 }
 
-export function PlatformBadge({ platform }) {
+export function PlatformBadge({ platform = '' }) {
   let [color, bg, border] = ['', '', ''];
-  if (platform === 'Leetcode') {
+  const p = platform.toLowerCase();
+  
+  if (p === 'leetcode') {
     color = 'text-orange-700 dark:text-orange-400';
     bg = 'bg-orange-50 dark:bg-orange-500/10';
     border = 'border-orange-200 dark:border-orange-500/20';
-  } else if (platform === 'GeeksForGeeks') {
+  } else if (p === 'geeksforgeeks' || p === 'gfg') {
     color = 'text-green-700 dark:text-green-400';
     bg = 'bg-green-50 dark:bg-green-500/10';
     border = 'border-green-200 dark:border-green-500/20';

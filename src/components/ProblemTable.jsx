@@ -31,8 +31,7 @@ export default function ProblemTable({ problems, onEdit }) {
             <th className="table-th" onClick={() => handleSort('difficulty')}>Difficulty <SortIcon sortKey="difficulty"/></th>
             <th className="table-th hidden md:table-cell">Topics</th>
             <th className="table-th" onClick={() => handleSort('status')}>Status <SortIcon sortKey="status"/></th>
-            <th className="table-th hidden sm:table-cell" onClick={() => handleSort('person')}>Person <SortIcon sortKey="person"/></th>
-            <th className="table-th" onClick={() => handleSort('dateSolved')}>Solved <SortIcon sortKey="dateSolved"/></th>
+            <th className="table-th text-center" onClick={() => handleSort('dateSolved')}>Solved <SortIcon sortKey="dateSolved"/></th>
             <th className="table-th hidden lg:table-cell" onClick={() => handleSort('timeComplexity')}>Time (Min) <SortIcon sortKey="timeComplexity"/></th>
             <th className="table-th hidden sm:table-cell" onClick={() => handleSort('revisionCount')}>Rev# <SortIcon sortKey="revisionCount"/></th>
             <th className="table-th text-center">POTD</th>
@@ -69,7 +68,6 @@ export default function ProblemTable({ problems, onEdit }) {
                   {p.status}
                 </span>
               </td>
-              <td className="table-td hidden sm:table-cell text-sm text-slate-600 dark:text-slate-300">{p.person}</td>
               <td className="table-td text-xs text-slate-500 font-mono tracking-tight">{(p.dateSolved || p.solvedDate || '').substring(0, 10)}</td>
               <td className="table-td hidden lg:table-cell text-xs text-slate-500 font-mono">{p.timeComplexity || '—'}</td>
               <td className="table-td hidden sm:table-cell text-center font-bold text-slate-700 dark:text-slate-200">{p.revisionCount}</td>

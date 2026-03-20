@@ -169,11 +169,104 @@ export function StoreProvider({ children }) {
     return data;
   }, [problems]);
 
+  // ── Global Activity Detection ───────────────────────────────────────────
+  const [rawAllSubmissions, setRawAllSubmissions] = useState([]);
+  const [dismissedSlugs, setDismissedSlugs] = useState([]);
+
+  const checkGlobalSubmissions = useCallback(async () => {
+    if (!token) return;
+    try {
+      let combined = [];
+
+      // 1. LeetCode
+      if (authUser?.leetcodeUsername) {
+        const res = await fetch(`/api/leetcode/recent/${authUser.leetcodeUsername}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const recent = await res.json();
+          combined = [...combined, ...recent.map(s => ({ ...s, platform: 'LeetCode' }))];
+        }
+      }
+
+      setRawAllSubmissions(combined);
+    } catch (err) {
+      console.error('Detection error:', err);
+    }
+  }, [token, authUser]);
+
+  const detectedSubmissions = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTimestamp = today.getTime() / 1000;
+
+    return rawAllSubmissions.filter(rs => {
+      const isLeetCode = rs.platform === 'LeetCode';
+      if (!isLeetCode) return false;
+
+      // Must be from today
+      const ts = parseInt(rs.timestamp) / 1000; // Normalizing to seconds if it was ms
+      if (ts < todayTimestamp && rs.timestamp > 10000000000) { // If it was ms, check accordingly
+          if (rs.timestamp / 1000 < todayTimestamp) return false;
+      } else if (ts < todayTimestamp) {
+          return false;
+      }
+      
+      if (dismissedSlugs.includes(rs.titleSlug)) return false;
+      
+      // Link check (approximate for generic platforms)
+      const isAlreadyTracked = problems.some(p => 
+        p.name.toLowerCase() === rs.title.toLowerCase() || 
+        (p.link && p.link.includes(rs.titleSlug))
+      );
+      
+      return !isAlreadyTracked;
+    });
+  }, [rawAllSubmissions, problems, dismissedSlugs]);
+
+  const syncAllPlatformStats = useCallback(async () => {
+    if (!token) return;
+    try {
+      // Automated sync for LeetCode (keeps the existing dedicated sync if desired)
+      if (authUser?.leetcodeUsername) {
+        const res = await fetch(`/api/leetcode/stats/${authUser.leetcodeUsername}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const stats = await res.json();
+          await fetch('/api/leetcode/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ leetcodeUsername: authUser.leetcodeUsername, stats })
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Auto-sync error:', err);
+    }
+  }, [token, authUser]);
+
+  useEffect(() => {
+    checkGlobalSubmissions();
+    syncAllPlatformStats();
+    
+    const interval = setInterval(() => {
+      checkGlobalSubmissions();
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [checkGlobalSubmissions, syncAllPlatformStats]);
+
+  const dismissSubmission = (titleSlug) => {
+    setDismissedSlugs(prev => [...prev, titleSlug]);
+  };
+
   const value = {
     problems, addProblem, updateProblem, deleteProblem,
     theme, toggleTheme,
     stats, todayStr, activityData,
-    filters, setFilter, togglePOTD, setDateRange, authUser
+    filters, setFilter, togglePOTD, setDateRange, authUser,
+    detectedSubmissions, dismissSubmission, checkGlobalSubmissions,
+    syncAllPlatformStats
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

@@ -91,10 +91,7 @@ export default function TopicBoard() {
                     </div>
                   )}
                   <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
-                    <span className="flex items-center gap-1"><User size={10} />{p.person || '—'}</span>
-                    {p.timeTaken ? (
-                      <span className="flex items-center gap-1"><Clock4 size={10} />{p.timeTaken}m</span>
-                    ) : null}
+                    <span className="flex items-center gap-1"><Clock4 size={10} />{p.timeTaken || 0}m</span>
                   </div>
                 </button>
               ))}

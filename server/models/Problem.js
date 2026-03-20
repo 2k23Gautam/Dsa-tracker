@@ -8,7 +8,6 @@ const problemSchema = new mongoose.Schema({
   status: { type: String, enum: ['Not Started', 'Attempted', 'Solved', 'Needs Revision', 'Revised'], default: 'Not Started' },
   topics: [{ type: String }],
   patterns: [{ type: String }],
-  person: { type: String },
   platform: { type: String },
   link: { type: String },
   approach: { type: String },

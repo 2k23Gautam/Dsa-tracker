@@ -1,4 +1,4 @@
-export const PLATFORMS = ['Leetcode', 'GFG', 'Codeforces', 'CodeChef', 'Coding Ninja'];
+export const PLATFORMS = ['LeetCode', 'GeeksForGeeks', 'Codeforces', 'CodeChef', 'Coding Ninja'];
 
 export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 
@@ -31,4 +31,11 @@ export const SPACE_COMPLEXITIES = [
 ];
 
 export const SEED_PROBLEMS = [];
+
+export const BAR_COLORS = {
+  solved: '#10b981',        // emerald-500
+  revised: '#3b82f6',       // blue-500
+  needsRevision: '#f59e0b',  // amber-500
+  others: '#94a3b8'         // slate-400
+};
 

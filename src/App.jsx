@@ -9,8 +9,12 @@ import TopicBoard from './pages/TopicBoard.jsx';
 import NeedsRevision from './pages/NeedsRevision.jsx';
 import TodayDSA from './pages/TodayDSA.jsx';
 import SolvedCalendar from './pages/SolvedCalendar.jsx';
+import Community from './pages/Community.jsx';
+import Profile from './pages/Profile.jsx';
+import FriendProfile from './pages/FriendProfile.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 // Protected Route Wrapper
 function ProtectedRoutes() {
@@ -64,6 +68,9 @@ export default function App() {
           <Route path="revision"  element={<NeedsRevision />} />
           <Route path="today"     element={<TodayDSA />} />
           <Route path="calendar"  element={<SolvedCalendar />} />
+          <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/profile/:id" element={<ProtectedRoute><FriendProfile /></ProtectedRoute>} />
         </Route>
       </Routes>
     </BrowserRouter>

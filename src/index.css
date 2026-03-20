@@ -125,17 +125,43 @@
   }
 }
 
-/* ── Kanban Board ─────────────────────────────────────────────────── */
-.kanban-board {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  min-height: calc(100vh - 12rem);
+/* ── Animations ─────────────────────────────────────────────────── */
+@keyframes float {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% { transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)); opacity: 0; }
 }
-.kanban-col {
-  flex: 0 0 300px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+
+.animate-float {
+  animation: float var(--float-duration, 20s) linear infinite;
+  animation-delay: var(--float-delay, 0s);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee var(--duration, 30s) linear infinite;
+}
+
+/* ── Placement Gradients ─────────────────────────────────────────── */
+.bg-placement-gradient {
+  background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent),
+              radial-gradient(circle at bottom left, rgba(79, 70, 229, 0.08), transparent);
+}
+
+.dark .bg-placement-gradient {
+  background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent),
+              radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.05), transparent);
 }

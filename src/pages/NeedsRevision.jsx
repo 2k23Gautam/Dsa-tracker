@@ -7,12 +7,15 @@ import ProblemTable from '../components/ProblemTable.jsx';
 import ProblemModal from '../components/ProblemModal.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import FilterBar from '../components/FilterBar.jsx';
+import RevisionDateModal from '../components/RevisionDateModal.jsx';
 
 export default function NeedsRevision() {
   const { problems, updateProblem, filters } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [editProblem, setEditProblem] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [dateModalOpen, setDateModalOpen] = useState(false);
+  const [activeProblem, setActiveProblem] = useState(null);
 
   const revisionProblems = problems.filter(p => p.status === 'Needs Revision');
   const visible = applyFilters(revisionProblems, filters, searchQuery);
@@ -20,18 +23,23 @@ export default function NeedsRevision() {
   const openEdit = (p) => { setEditProblem(p); setModalOpen(true); };
   const closeModal = () => { setModalOpen(false); setEditProblem(null); };
 
+  const openDateModal = (p) => { setActiveProblem(p); setDateModalOpen(true); };
+  const closeDateModal = () => { setDateModalOpen(false); setActiveProblem(null); };
+
+  const handleSaveDate = (date) => {
+    if (activeProblem) {
+      updateProblem(activeProblem.id, { revisionDate: date });
+      toast.success('Revision date updated!');
+    }
+  };
+
   const markRevised = (p) => {
     updateProblem(p.id, { status: 'Revised', revisionCount: (p.revisionCount || 0) + 1 });
     toast.success(`"${p.name}" marked as Revised`);
   };
 
   const setNextRevision = (p) => {
-    const d = prompt('Set next revision date (YYYY-MM-DD):',
-      new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
-    if (d) {
-      updateProblem(p.id, { revisionDate: d });
-      toast.success('Revision date set!');
-    }
+    openDateModal(p);
   };
 
   return (
@@ -117,6 +125,12 @@ export default function NeedsRevision() {
       )}
 
       <ProblemModal open={modalOpen} onClose={closeModal} editProblem={editProblem} />
+      <RevisionDateModal 
+        open={dateModalOpen} 
+        onClose={closeDateModal} 
+        onSave={handleSaveDate} 
+        currentProblem={activeProblem} 
+      />
     </div>
   );
 }
