@@ -1,35 +1,62 @@
 import { useMemo, useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { format, subDays, subMonths } from 'date-fns';
-import { Target, CheckCircle2, AlertTriangle, Flame, TrendingUp, Globe, ExternalLink, CalendarDays } from 'lucide-react';
+import { Target, CheckCircle2, Flame, TrendingUp, Globe, ExternalLink, CalendarDays } from 'lucide-react';
 import { useStore } from '../store/StoreContext.jsx';
 import { useAuth } from '../store/AuthContext.jsx';
-import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, BarChart, Bar, YAxis, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ProblemModal from '../components/ProblemModal.jsx';
 import CircularProgress from '../components/CircularProgress.jsx';
 
 import { BAR_COLORS } from '../store/data.js';
 
 export default function Dashboard() {
-  const { stats, problems, detectedSubmissions, dismissSubmission } = useStore();
+  const { stats, problems, detectedSubmissions, dismissSubmission, lastSyncTime } = useStore();
   const { authUser } = useAuth();
   const [timeRange, setTimeRange] = useState('14 Days');
   const [modalOpen, setModalOpen] = useState(false);
   const [initialModalData, setInitialModalData] = useState(null);
   const [contests, setContests] = useState([]);
+  const [contestError, setContestError] = useState(false);
   const { token } = useAuth();
 
+  const fetchContests = async () => {
+    setContestError(false);
+    try {
+      const res = await fetch('/api/platforms/contests', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setContests(await res.json());
+      } else {
+        setContestError(true);
+      }
+    } catch (e) {
+      console.error('Contest fetch error:', e);
+      setContestError(true);
+    }
+  };
+
+  // Re-fetch on every mount so data is always fresh
   useEffect(() => {
-    const fetchContests = async () => {
-      try {
-        const res = await fetch('/api/platforms/contests', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) setContests(await res.json());
-      } catch (e) { console.error('Contest fetch error:', e); }
-    };
-    fetchContests();
+    if (token) fetchContests();
   }, [token]);
+
+  const handleRegister = async (contestId, link) => {
+    window.open(link, '_blank');
+    try {
+      await fetch('/api/platforms/contests/dismiss', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({ contestId })
+      });
+      // Refresh list
+      fetchContests();
+    } catch (e) { console.error('Dismiss error:', e); }
+  };
 
   const connectedPlatforms = useMemo(() => {
     const list = [];
@@ -87,6 +114,28 @@ export default function Dashboard() {
 
 
   const totalProblems = useMemo(() => problems.length, [problems]);
+  
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = Date.now();
+      const next = lastSyncTime + (5 * 60 * 1000);
+      const diff = next - now;
+
+      if (diff <= 0) {
+        setTimeLeft('Refresh available');
+      } else {
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        setTimeLeft(`Refreshing in ${mins}:${secs.toString().padStart(2, '0')}`);
+      }
+    };
+
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, [lastSyncTime]);
 
   return (
     <div className="space-y-6">
@@ -97,7 +146,7 @@ export default function Dashboard() {
           <h1 className="text-2xl md:text-3xl font-bold font-outfit text-slate-900 dark:text-white tracking-tight">
             Overview
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm tracking-wide">
+          <p className="text-slate-600 dark:text-slate-400 text-sm tracking-wide">
             Your DSA progress at a glance
           </p>
         </div>
@@ -110,15 +159,25 @@ export default function Dashboard() {
       </div>
 
       {/* Contest Monitor Cards */}
-      {contests.length > 0 && (
+      <div className="flex items-center justify-between mb-2 px-1">
+        <h2 className="section-title mb-0">Upcoming Contests (Next 48h)</h2>
+        <button 
+          onClick={fetchContests}
+          className="text-[10px] font-black text-brand-500 uppercase tracking-widest hover:text-brand-600 transition-colors"
+        >
+          Refresh
+        </button>
+      </div>
+
+      {contests.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {contests.slice(0, 3).map((contest) => (
+          {contests.map((contest) => (
             <div key={contest.id} className="relative group overflow-hidden rounded-3xl border border-brand-500/10 bg-white dark:bg-white/[0.03] p-5 transition-all hover:border-brand-500/40 shadow-xl shadow-brand-500/5">
               <div className="flex items-center justify-between gap-4 mb-4 relative z-10">
                 <div className="px-3 py-0.5 rounded-full bg-brand-500 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-brand-500/20">
                   {contest.platform}
                 </div>
-                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-tighter">
+                <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 font-bold text-[10px] uppercase tracking-tighter">
                   <CalendarDays size={12} className="text-brand-500" />
                   {format(new Date(contest.startTime), 'MMM dd, HH:mm')}
                 </div>
@@ -132,18 +191,35 @@ export default function Dashboard() {
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   Starts in {Math.max(0, Math.round((contest.startTime - Date.now()) / (1000 * 60 * 60)))}h
                 </p>
-                <a 
-                  href={contest.link} 
-                  target="_blank" 
-                  rel="noreferrer"
+                <button 
+                  onClick={() => handleRegister(contest.id, contest.link)}
                   className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-brand-500 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all border border-transparent hover:shadow-lg shadow-brand-500/20"
                 >
                   Register
-                </a>
+                </button>
               </div>
               <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-brand-500/5 rounded-full blur-3xl group-hover:bg-brand-500/10 transition-all" />
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="glass-card p-12 flex flex-col items-center justify-center text-center space-y-4 border-dashed border-slate-200 dark:border-white/[0.08]">
+          <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${contestError ? 'bg-red-50 dark:bg-red-500/[0.08] text-red-400' : 'bg-slate-50 dark:bg-white/[0.02] text-slate-300 dark:text-slate-600'}`}>
+             <CalendarDays size={32} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+              {contestError ? 'Could Not Load Contests' : 'No Upcoming Contests'}
+            </h3>
+            <p className="text-xs text-slate-500 max-w-[260px] mt-1">
+              {contestError
+                ? 'The contest data source is temporarily unavailable. Please try refreshing.'
+                : 'There are no contests scheduled on supported platforms in the next 48 hours.'}
+            </p>
+          </div>
+          <button onClick={fetchContests} className="px-4 py-2 rounded-xl bg-brand-500/10 text-brand-600 text-[10px] font-black uppercase tracking-widest hover:bg-brand-500/20 transition-all">
+            {contestError ? 'Retry' : 'Check Now'}
+          </button>
         </div>
       )}
 
@@ -189,7 +265,7 @@ export default function Dashboard() {
             label="STREAK"
             value={`${stats.streak}d`}
             icon={<Flame size={16} />}
-            colorClass="text-orange-500"
+            colorClass="text-orange-600 dark:text-orange-500"
           />
         </div>
       </div>
@@ -205,9 +281,9 @@ export default function Dashboard() {
               <h2 className="text-lg font-bold text-slate-800 dark:text-white">Platform Insights</h2>
               {authUser?.leetcodeUsername && <span className="text-[9px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">LeetCode</span>}
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
               {authUser?.leetcodeUsername
-                ? "Your LeetCode progress is now unified and real-time."
+                ? `Your LeetCode progress is unified and real-time. ${timeLeft}`
                 : "Connect your LeetCode account in Profile to see automated insights"}
             </p>
           </div>
@@ -277,7 +353,7 @@ export default function Dashboard() {
                         ? `You solved ${detectedSubmissions.length} problems today!` 
                         : `New ${detectedSubmissions[0].platform} Submission!`}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
                       {detectedSubmissions.length > 1
                         ? `Track them one by one. Starting with `
                         : `You solved `}
@@ -288,7 +364,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => dismissSubmission(detectedSubmissions[0].titleSlug)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
                   >
                     Ignore
                   </button>
@@ -330,7 +406,7 @@ export default function Dashboard() {
                   <button
                     key={btn}
                     onClick={() => setTimeRange(btn)}
-                    className={`px-3 py-1 text-[11px] font-bold tracking-wide rounded-md transition-colors ${timeRange === btn ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                    className={`px-3 py-1 text-[11px] font-bold tracking-wide rounded-md transition-colors ${timeRange === btn ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                   >
                     {btn}
                   </button>
@@ -371,27 +447,94 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Topic Mastery Graph */}
-        <div className="glass-card p-5 md:p-6 flex flex-col h-[340px]">
-          <h2 className="section-title mb-6">Topic Mastery</h2>
-          <div className="flex-1 w-full min-h-0 -ml-4">
-            {topicProgress.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topicProgress} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }} barSize={14}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148,163,184,0.15)" />
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="label" axisLine={false} tickLine={false} width={110} tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} />
-                  <Tooltip content={<BarTooltip />} cursor={{ fill: 'rgba(148,163,184,0.05)' }} />
-                  <Bar name="Solved" dataKey="solved" stackId="a" fill={BAR_COLORS.solved} />
-                  <Bar name="Revised" dataKey="revised" stackId="a" fill={BAR_COLORS.revised} />
-                  <Bar name="Needs Revision" dataKey="needsRevision" stackId="a" fill={BAR_COLORS.needsRevision} />
-                  <Bar name="Others" dataKey="others" stackId="a" fill={BAR_COLORS.others} radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-sm font-medium text-slate-400 dark:text-slate-500 text-center mt-10">Add problems with topics to see your breakdown.</p>
-            )}
+        {/* Topic Mastery */}
+        <div className="glass-card p-5 md:p-6 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="section-title mb-0">Topic Mastery</h2>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              {topicProgress.length} Topics
+            </span>
           </div>
+
+          {topicProgress.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2.5 overflow-y-auto max-h-[290px] pr-0.5">
+              {topicProgress.map((topic) => {
+                const total = topic.tracked || 1;
+                const solvedPct = Math.round((topic.solved / total) * 100);
+
+                // Color based on completion
+                const pctColor =
+                  solvedPct === 100 ? BAR_COLORS.solved :
+                  solvedPct >= 60   ? '#3b82f6' :
+                  solvedPct >= 30   ? BAR_COLORS.needsRevision :
+                                      '#ef4444';
+
+                const bgAlpha = '18';
+
+                return (
+                  <div
+                    key={topic.label}
+                    className="relative overflow-hidden rounded-2xl p-3.5 border border-slate-100 dark:border-white/[0.06] bg-slate-50 dark:bg-white/[0.02] flex flex-col gap-2 hover:border-slate-200 dark:hover:border-white/10 transition-colors"
+                  >
+                    {/* Faint glow blob */}
+                    <div
+                      className="absolute -right-4 -top-4 w-16 h-16 rounded-full blur-2xl opacity-40"
+                      style={{ backgroundColor: pctColor }}
+                    />
+
+                    {/* Top: name + percentage */}
+                    <div className="flex items-start justify-between gap-1 relative z-10">
+                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight line-clamp-2">
+                        {topic.label}
+                      </span>
+                      <span
+                        className="text-base font-black leading-none flex-shrink-0 ml-1"
+                        style={{ color: pctColor }}
+                      >
+                        {solvedPct}%
+                      </span>
+                    </div>
+
+                    {/* Progress fill bar */}
+                    <div className="relative h-1.5 w-full rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden z-10">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${solvedPct}%`,
+                          background: `linear-gradient(90deg, ${pctColor}cc, ${pctColor})`
+                        }}
+                      />
+                    </div>
+
+                    {/* Bottom: status dots + count */}
+                    <div className="flex items-center justify-between relative z-10">
+                      <div className="flex items-center gap-1">
+                        {topic.solved > 0 && (
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: BAR_COLORS.solved }} title="Solved" />
+                        )}
+                        {topic.revised > 0 && (
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: BAR_COLORS.revised }} title="Revised" />
+                        )}
+                        {topic.needsRevision > 0 && (
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: BAR_COLORS.needsRevision }} title="Needs Revision" />
+                        )}
+                        {topic.others > 0 && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" title="Not Started" />
+                        )}
+                      </div>
+                      <span className="text-[10px] font-black text-slate-400 tabular-nums">
+                        {topic.solved}/{topic.tracked}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm font-medium text-slate-400 dark:text-slate-600 text-center mt-10">
+              Add problems with topics to see your breakdown.
+            </p>
+          )}
         </div>
         
       </div>
@@ -409,7 +552,7 @@ function SmallStatCard({ label, value, icon, colorClass }) {
   return (
     <div className="glass-card p-4 flex items-center justify-between">
       <div>
-        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 tracking-wider block mb-1">
+        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 tracking-wider block mb-1">
           {label}
         </span>
         <p className="text-xl font-bold font-outfit text-slate-900 dark:text-white tracking-tight">
@@ -423,45 +566,13 @@ function SmallStatCard({ label, value, icon, colorClass }) {
   );
 }
 
-const BarTooltip = ({ active, payload }) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    return (
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] shadow-bento px-3 py-2 rounded-lg text-sm min-w-[140px]">
-        <span className="text-slate-900 dark:text-white font-bold block mb-2">{data.label}</span>
-        <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-1.5">
-          <span className="flex items-center justify-between gap-6">
-            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-md" style={{ backgroundColor: BAR_COLORS.solved }}/> Solved</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">{data.solved}</span>
-          </span>
-          <span className="flex items-center justify-between gap-6">
-            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-md" style={{ backgroundColor: BAR_COLORS.revised }}/> Revised</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">{data.revised}</span>
-          </span>
-          <span className="flex items-center justify-between gap-6">
-            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-md" style={{ backgroundColor: BAR_COLORS.needsRevision }}/> Needs Revision</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">{data.needsRevision}</span>
-          </span>
-          <span className="flex items-center justify-between gap-6">
-            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-md" style={{ backgroundColor: BAR_COLORS.others }}/> Others</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">{data.others}</span>
-          </span>
-          <div className="border-t border-slate-100 dark:border-white/[0.06] mt-1 pt-1 flex items-center justify-between gap-6">
-            <span className="font-medium text-slate-400">Total Tracked</span>
-            <span className="font-bold text-slate-900 dark:text-white">{data.tracked}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
+
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/[0.08] shadow-bento px-3 py-2 rounded-lg text-sm flex flex-col gap-1">
-        <span className="text-slate-500 dark:text-slate-400 font-medium text-xs">{label}</span>
+        <span className="text-slate-600 dark:text-slate-400 font-medium text-xs">{label}</span>
         <span className="text-slate-900 dark:text-white font-bold">{payload[0].value} Solved</span>
       </div>
     );

@@ -34,7 +34,7 @@ export default function MyProblems() {
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               My Problems
             </h1>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-400 dark:text-slate-600 mt-0.5">
               {authUser ? `Showing for "${authUser.name}"` : 'Please log in to see your problems'}
             </p>
           </div>

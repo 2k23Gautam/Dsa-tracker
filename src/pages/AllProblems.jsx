@@ -63,7 +63,7 @@ export default function AllProblems() {
           </div>
           <div>
             <h1 className="text-2xl font-bold font-outfit text-slate-900 dark:text-white tracking-tight leading-none">All Problems</h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{filteredProblems.length} of {problems.length} shown</p>
+            <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">{filteredProblems.length} of {problems.length} shown</p>
           </div>
         </div>
         <button onClick={openNew} className="btn-primary shrink-0 self-start sm:self-auto">

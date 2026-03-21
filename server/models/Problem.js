@@ -13,6 +13,7 @@ const problemSchema = new mongoose.Schema({
   approach: { type: String },
   timeComplexity: { type: String },
   spaceComplexity: { type: String },
+  solutionCode: { type: String },
   revisionDate: { type: String },
   dateSolved: { type: String },
   revisionCount: { type: Number, default: 0 },

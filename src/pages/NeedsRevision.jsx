@@ -52,7 +52,7 @@ export default function NeedsRevision() {
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Needs Revision
           </h1>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-400 dark:text-slate-600 mt-0.5">
             {revisionProblems.length} problem{revisionProblems.length !== 1 ? 's' : ''} waiting for revision
           </p>
         </div>
@@ -75,7 +75,7 @@ export default function NeedsRevision() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm line-clamp-2">{p.name}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{p.person || '—'} · {p.platform}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-600 mt-0.5">{p.person || '—'} · {p.platform}</p>
                   </div>
                   <span className="text-[10px] font-bold bg-amber-400/15 text-amber-400 px-2 py-0.5 rounded-full whitespace-nowrap">
                     Rev #{p.revisionCount || 0}
@@ -83,13 +83,13 @@ export default function NeedsRevision() {
                 </div>
 
                 {p.revisionDate && (
-                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                  <p className="text-xs text-slate-400 dark:text-slate-600">
                     📅 Next revision: <span className="text-amber-400 font-medium">{p.revisionDate}</span>
                   </p>
                 )}
 
                 {p.approach && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 italic">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 italic">
                     {p.approach}
                   </p>
                 )}
@@ -109,7 +109,7 @@ export default function NeedsRevision() {
                   </button>
                   <button onClick={() => openEdit(p)}
                     className="px-3 bg-surface-100 dark:bg-white/[0.04] hover:bg-surface-200 dark:hover:bg-white/[0.08]
-                               text-slate-500 text-xs py-2 rounded-xl transition-all duration-200">
+                               text-slate-600 text-xs py-2 rounded-xl transition-all duration-200">
                     <Pencil size={15} />
                   </button>
                 </div>
@@ -118,7 +118,7 @@ export default function NeedsRevision() {
           </div>
 
           <div className="mt-4">
-            <h2 className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-widest">Table View</h2>
+            <h2 className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-2 uppercase tracking-widest">Table View</h2>
             <ProblemTable problems={visible} onEdit={openEdit} />
           </div>
         </>

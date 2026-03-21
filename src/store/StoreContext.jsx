@@ -1,10 +1,11 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { useAuth } from './AuthContext.jsx';
 import { SEED_PROBLEMS } from './data.js';
 
 const STORAGE_KEY = 'dsa_tracker_v1';
 const THEME_KEY   = 'dsa_theme';
+const DISMISSED_KEY = 'dsa_dismissed_slugs';
 
 function genId() {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
@@ -14,11 +15,8 @@ function genId() {
 const StoreContext = createContext(null);
 
 export function StoreProvider({ children }) {
-  const { authUser } = useAuth();
-
-  // ── Problems ──────────────────────────────────────────────────────────────
+  const { authUser, updateAuthUser, token } = useAuth();
   const [problems, setProblems] = useState([]);
-  const { token } = useAuth();
 
   useEffect(() => {
     if (!token) {
@@ -171,10 +169,24 @@ export function StoreProvider({ children }) {
 
   // ── Global Activity Detection ───────────────────────────────────────────
   const [rawAllSubmissions, setRawAllSubmissions] = useState([]);
-  const [dismissedSlugs, setDismissedSlugs] = useState([]);
+  const [dismissedSlugs, setDismissedSlugs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(DISMISSED_KEY)) || []; } catch { return []; }
+  });
+  const [lastSyncTime, setLastSyncTime] = useState(0);
+  const isSyncingRef = useRef(false);
 
-  const checkGlobalSubmissions = useCallback(async () => {
+  useEffect(() => {
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissedSlugs));
+  }, [dismissedSlugs]);
+
+  const checkGlobalSubmissions = useCallback(async (force = false) => {
     if (!token) return;
+    
+    const now = Date.now();
+    if (!force && (now - lastSyncTime < 5 * 60 * 1000)) {
+       return;
+    }
+
     try {
       let combined = [];
 
@@ -190,10 +202,11 @@ export function StoreProvider({ children }) {
       }
 
       setRawAllSubmissions(combined);
+      setLastSyncTime(Date.now());
     } catch (err) {
       console.error('Detection error:', err);
     }
-  }, [token, authUser]);
+  }, [token, authUser, lastSyncTime]);
 
   const detectedSubmissions = useMemo(() => {
     const today = new Date();
@@ -205,27 +218,41 @@ export function StoreProvider({ children }) {
       if (!isLeetCode) return false;
 
       // Must be from today
-      const ts = parseInt(rs.timestamp) / 1000; // Normalizing to seconds if it was ms
-      if (ts < todayTimestamp && rs.timestamp > 10000000000) { // If it was ms, check accordingly
-          if (rs.timestamp / 1000 < todayTimestamp) return false;
-      } else if (ts < todayTimestamp) {
-          return false;
-      }
+      const rawTs = parseInt(rs.timestamp);
+      // LeetCode returns seconds. If > 10^10, it's likely milliseconds.
+      const ts = rawTs > 10000000000 ? rawTs / 1000 : rawTs;
+
+      if (ts < todayTimestamp) return false;
       
       if (dismissedSlugs.includes(rs.titleSlug)) return false;
       
-      // Link check (approximate for generic platforms)
-      const isAlreadyTracked = problems.some(p => 
-        p.name.toLowerCase() === rs.title.toLowerCase() || 
-        (p.link && p.link.includes(rs.titleSlug))
-      );
+      // Link or Title check
+      const isAlreadyTracked = problems.some(p => {
+        const nameMatch = p.name.trim().toLowerCase() === rs.title.trim().toLowerCase();
+        
+        // Extract slug from link if possible
+        let linkSlug = '';
+        if (p.link) {
+           const parts = p.link.split('/').filter(Boolean);
+           linkSlug = parts[parts.length - 1];
+        }
+
+        const linkMatch = (p.link && p.link.includes(rs.titleSlug)) || (linkSlug === rs.titleSlug);
+        
+        return nameMatch || linkMatch;
+      });
       
       return !isAlreadyTracked;
     });
   }, [rawAllSubmissions, problems, dismissedSlugs]);
 
   const syncAllPlatformStats = useCallback(async () => {
-    if (!token) return;
+    if (!token || isSyncingRef.current) return;
+    
+    // throttle if ran in last 2 minutes, unless forced (though we don't have force here yet)
+    // but the interval is 5min anyway.
+    
+    isSyncingRef.current = true;
     try {
       // Automated sync for LeetCode (keeps the existing dedicated sync if desired)
       if (authUser?.leetcodeUsername) {
@@ -234,27 +261,40 @@ export function StoreProvider({ children }) {
         });
         if (res.ok) {
           const stats = await res.json();
-          await fetch('/api/leetcode/sync', {
+          const syncRes = await fetch('/api/leetcode/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ leetcodeUsername: authUser.leetcodeUsername, stats })
           });
+          if (syncRes.ok) {
+            const data = await syncRes.json();
+            if (data.user) {
+              updateAuthUser(data.user);
+            }
+          }
         }
       }
     } catch (err) {
       console.error('Auto-sync error:', err);
+    } finally {
+      isSyncingRef.current = false;
     }
   }, [token, authUser]);
 
   useEffect(() => {
-    checkGlobalSubmissions();
-    syncAllPlatformStats();
+    if (token) {
+      checkGlobalSubmissions();
+      syncAllPlatformStats();
+    }
     
     const interval = setInterval(() => {
-      checkGlobalSubmissions();
+      if (token) {
+        checkGlobalSubmissions(true);
+        syncAllPlatformStats();
+      }
     }, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [checkGlobalSubmissions, syncAllPlatformStats]);
+  }, [token]); // Only depend on token
 
   const dismissSubmission = (titleSlug) => {
     setDismissedSlugs(prev => [...prev, titleSlug]);
@@ -266,7 +306,7 @@ export function StoreProvider({ children }) {
     stats, todayStr, activityData,
     filters, setFilter, togglePOTD, setDateRange, authUser,
     detectedSubmissions, dismissSubmission, checkGlobalSubmissions,
-    syncAllPlatformStats
+    syncAllPlatformStats, lastSyncTime
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

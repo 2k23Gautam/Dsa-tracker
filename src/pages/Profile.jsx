@@ -121,12 +121,12 @@ export default function Profile() {
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
             {authUser?.name}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2 justify-center md:justify-start">
+          <p className="text-slate-600 dark:text-slate-400 font-medium flex items-center gap-2 justify-center md:justify-start">
             <Mail size={14} /> {authUser?.email}
           </p>
           <div className="flex flex-wrap gap-2 pt-2 justify-center md:justify-start">
             <span className="px-3 py-1 rounded-full bg-brand-500/10 text-brand-500 text-[10px] font-black uppercase tracking-wider border border-brand-500/20">Student</span>
-            <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 text-[10px] font-black uppercase tracking-wider border border-slate-200 dark:border-white/10">Active Tracker</span>
+            <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 text-[10px] font-black uppercase tracking-wider border border-slate-200 dark:border-white/10">Active Tracker</span>
           </div>
         </div>
 
@@ -137,13 +137,13 @@ export default function Profile() {
         {/* Settings Area */}
         <div className="lg:col-span-2 space-y-6">
           <div className="gradient-glass p-8 space-y-8">
-            <h2 className="text-sm font-black text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-white/5 pb-4 uppercase tracking-[0.2em] flex items-center gap-2">
+            <h2 className="text-sm font-black text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-white/5 pb-4 uppercase tracking-[0.2em] flex items-center gap-2">
               <Settings size={16} /> Account Preferences
             </h2>
 
             <form onSubmit={handleUpdateHandles} className="space-y-6">
               <div className="flex flex-col gap-1 mb-2">
-                <h2 className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                <h2 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
                   <Link size={16} className="text-brand-500" /> Platform Connections
                 </h2>
                 <p className="text-xs text-slate-400">Link your LeetCode account to automate tracking</p>
@@ -182,7 +182,7 @@ export default function Profile() {
         {/* Sync Center */}
         <div className="space-y-6">
           <div className="gradient-glass p-8 space-y-6">
-             <h2 className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">Platform Status</h2>
+             <h2 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em]">Platform Status</h2>
              
              <div className="space-y-4">
                 {[
@@ -191,12 +191,12 @@ export default function Profile() {
                  <div key={p.label} className={`p-4 rounded-2xl border transition-all ${p.handle ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-slate-500/5 border-slate-500/10 opacity-60'}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${p.handle ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-500'}`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${p.handle ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-500/10 text-slate-600'}`}>
                            {p.handle ? <CheckCircle2 size={20} /> : < Globe size={20} />}
                         </div>
                         <div>
                           <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tighter">{p.label}</p>
-                          <p className={`text-[10px] font-bold ${p.handle ? 'text-emerald-500' : 'text-slate-500'} uppercase`}>{p.handle || 'Not Linked'}</p>
+                          <p className={`text-[10px] font-bold ${p.handle ? 'text-emerald-500' : 'text-slate-600'} uppercase`}>{p.handle || 'Not Linked'}</p>
                         </div>
                       </div>
                       {p.handle && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}

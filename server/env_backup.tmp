@@ -1,0 +1,4 @@
+MONGO_URI=mongodb+srv://modigautam72_db_user:Gautam2601@cluster0.t0jc6hn.mongodb.net/?appName=Cluster0
+JWT_SECRET=supersecretdevelopmentkeythatisverylongandsecure
+PORT=5000
+GEMINI_API_KEY=AIzaSyDc9XZEndJJ_DFFuC0VZ5SdPk6QswxAhfo

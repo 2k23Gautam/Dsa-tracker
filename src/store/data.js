@@ -33,9 +33,9 @@ export const SPACE_COMPLEXITIES = [
 export const SEED_PROBLEMS = [];
 
 export const BAR_COLORS = {
-  solved: '#10b981',        // emerald-500
-  revised: '#3b82f6',       // blue-500
-  needsRevision: '#f59e0b',  // amber-500
-  others: '#94a3b8'         // slate-400
+  solved:        '#22c55e',   // green-500 — vibrant, clear "done"
+  revised:       '#6366f1',   // indigo-500 — distinct from solved
+  needsRevision: '#f97316',   // orange-500 — warm warning feel
+  others:        '#cbd5e1',   // slate-300 — soft, unobtrusive
 };
 

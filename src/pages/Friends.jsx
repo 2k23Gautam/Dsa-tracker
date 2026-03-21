@@ -51,7 +51,6 @@ export default function Friends() {
 
   const handleRemoveFriend = async (e, friendId) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to remove this friend?')) return;
     try {
       const res = await fetch(`/api/users/remove-friend/${friendId}`, {
         method: 'POST',

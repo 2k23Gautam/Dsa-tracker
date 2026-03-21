@@ -19,6 +19,34 @@ export default function Community() {
     }
   }, [authUser]);
 
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (query.trim()) {
+        performSearch();
+      } else {
+        setResults([]);
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [query]);
+
+  const performSearch = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/users/search?q=${query}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setResults(await res.json());
+      }
+    } catch (err) {
+      toast.error('Search failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchFriends = async () => {
     try {
       const res = await fetch('/api/users/friends', {
@@ -32,27 +60,12 @@ export default function Community() {
     }
   };
 
-  const handleSearch = async (e) => {
+  const handleSearch = (e) => {
     e.preventDefault();
-    if (!query.trim()) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/users/search?query=${query}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setResults(await res.json());
-      }
-    } catch (err) {
-      toast.error('Search failed');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleRemoveFriend = async (e, friendId) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to remove this friend?')) return;
     try {
       const res = await fetch(`/api/users/remove-friend/${friendId}`, {
         method: 'POST',
@@ -97,7 +110,7 @@ export default function Community() {
           <h1 className="text-4xl md:text-5xl font-black font-outfit text-slate-900 dark:text-white tracking-tight">
             Connect & Conquer
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm tracking-wide leading-relaxed">
+          <p className="text-slate-600 dark:text-slate-400 text-sm tracking-wide leading-relaxed">
             Find peers worldwide, track their LeetCode dominance, and climb the global leaderboards together.
           </p>
           
@@ -108,15 +121,13 @@ export default function Community() {
               placeholder="Search by name, email or LeetCode handle..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full bg-white dark:bg-white/[0.03] border-2 border-slate-100 dark:border-white/[0.08] rounded-3xl py-5 pl-16 pr-6 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-brand-500/40 transition-all shadow-xl shadow-slate-200/50 dark:shadow-none focus:bg-white dark:focus:bg-white/[0.05]"
+              className="w-full bg-white dark:bg-white/[0.03] border-2 border-slate-100 dark:border-white/[0.08] rounded-3xl py-5 pl-16 pr-10 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-brand-500/40 transition-all shadow-xl shadow-slate-200/50 dark:shadow-none focus:bg-white dark:focus:bg-white/[0.05]"
             />
-            <button 
-              type="submit"
-              disabled={loading}
-              className="absolute right-3 top-1/2 -translate-y-1/2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-2xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-            >
-              Search
-            </button>
+            {loading && (
+              <div className="absolute right-6 top-1/2 -translate-y-1/2">
+                <div className="w-5 h-5 border-2 border-brand-500/20 border-t-brand-500 rounded-full animate-spin" />
+              </div>
+            )}
           </form>
         </div>
         
@@ -128,7 +139,7 @@ export default function Community() {
         
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+            <h2 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
               <ShieldCheck size={16} className="text-brand-500" /> Search Results
             </h2>
           </div>
@@ -145,7 +156,7 @@ export default function Community() {
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">{user.leetcodeUsername || 'No LC Linked'}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <Trophy size={12} className="text-amber-500" />
-                      <span className="text-[10px] font-black text-slate-500 uppercase">Rank: {user.leetcodeStats?.userContestRanking?.globalRanking?.toLocaleString() || '---'}</span>
+                      <span className="text-[10px] font-black text-slate-600 uppercase">Rank: {user.leetcodeStats?.userContestRanking?.globalRanking?.toLocaleString() || '---'}</span>
                     </div>
                   </div>
                 </div>
@@ -181,7 +192,7 @@ export default function Community() {
 
         <div className="space-y-8">
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+            <h2 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
               <Users size={16} className="text-brand-500" /> My Network
             </h2>
           </div>

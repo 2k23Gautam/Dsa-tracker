@@ -23,7 +23,7 @@ export default function TopBar({ onMenuClick }) {
         <Menu size={20} />
       </button>
       <div className="hidden sm:block">
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 tracking-tight">{today}</p>
+        <p className="text-sm font-bold text-slate-600 dark:text-slate-400 tracking-tight">{today}</p>
       </div>
 
       {/* Center — stats */}
@@ -54,8 +54,8 @@ function StatPill({ icon, label, value, colorClass, bgClass }) {
   return (
     <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-slate-200 dark:border-white/[0.04] ${bgClass}`}>
       <span className={colorClass}>{icon}</span>
-      <span className="text-[12px] font-medium text-slate-600 dark:text-slate-300 hidden md:inline">{label}</span>
-      <span className={`text-[12px] font-bold ${colorClass}`}>{value}</span>
+      <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300 hidden md:inline">{label}</span>
+      <span className={`text-[12px] font-black ${colorClass}`}>{value}</span>
     </div>
   );
 }

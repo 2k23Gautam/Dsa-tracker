@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Problem = require('../models/Problem');
+const { suggestProblemMetadata } = require('../utils/ai');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretfallback';
 
@@ -73,6 +74,20 @@ router.delete('/:id', auth, async (req, res) => {
     res.json({ message: 'Problem deleted', id: req.params.id });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// AI Metadata Suggestion
+router.post('/ai-suggest', auth, async (req, res) => {
+  try {
+    const { name, link, solutionCode } = req.body;
+    const input = link || name;
+    if (!input) return res.status(400).json({ message: 'Name or link required' });
+
+    const metadata = await suggestProblemMetadata(input, solutionCode);
+    res.json(metadata);
+  } catch (err) {
+    res.status(500).json({ message: err.message || 'AI extraction failed' });
   }
 });
 

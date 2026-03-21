@@ -133,7 +133,7 @@ router.post('/friend-request/:userId', auth, async (req, res) => {
       return res.status(400).json({ message: 'Request already sent' });
     }
 
-    if (targetUser.friends.includes(req.user.id)) {
+    if (targetUser.friends.some(id => id.toString() === req.user.id)) {
       return res.status(400).json({ message: 'Already friends' });
     }
 
@@ -203,6 +203,35 @@ router.get('/friends', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate('friends', 'name email leetcodeUsername leetcodeStats');
     res.json(user.friends);
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   POST /api/users/remove-friend/:userId
+// @desc    Remove a friend
+// @access  Private
+router.post('/remove-friend/:userId', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const friendId = req.params.userId;
+
+    if (!user.friends.some(id => id.toString() === friendId)) {
+      return res.status(400).json({ message: 'User is not your friend' });
+    }
+
+    // Remove from current user
+    user.friends = user.friends.filter(id => id.toString() !== friendId);
+    await user.save();
+
+    // Remove from target user
+    const friend = await User.findById(friendId);
+    if (friend) {
+      friend.friends = friend.friends.filter(id => id.toString() !== req.user.id);
+      await friend.save();
+    }
+
+    res.json({ message: 'Friend removed successfully', user });
   } catch (err) {
     res.status(500).send('Server Error');
   }

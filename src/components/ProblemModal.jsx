@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import { X, Save, Trash2 } from 'lucide-react';
+import { X, Save, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { useStore } from '../store/StoreContext.jsx';
+import { useAuth } from '../store/AuthContext.jsx';
 import { PLATFORMS, DIFFICULTIES, STATUSES, TOPICS, PATTERNS, TIME_COMPLEXITIES, SPACE_COMPLEXITIES } from '../store/data.js';
 import TagInput from './TagInput.jsx';
+import toast from 'react-hot-toast';
 
 export default function ProblemModal({ open, onClose, editProblem = null, initialData = null }) {
   const { addProblem, updateProblem, deleteProblem, authUser } = useStore();
+  const { token } = useAuth();
   const [formData, setFormData] = useState({ ...initialState });
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -15,7 +18,6 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
       else if (initialData) setFormData({ ...initialState, ...initialData, dateSolved: new Date().toISOString().substring(0, 10) });
       else setFormData({ ...initialState, dateSolved: new Date().toISOString().substring(0, 10) });
     }
-    setShowConfirmDelete(false);
   }, [open, editProblem, initialData, authUser]);
 
   const handleSubmit = (e) => {
@@ -26,8 +28,57 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
   };
 
   const handleDelete = () => {
-    if (editProblem) deleteProblem(formData.id);
+    if (editProblem) {
+      deleteProblem(formData.id || formData._id);
+      toast.success('Problem deleted successfully');
+    }
     onClose();
+  };
+  const handleAiSuggest = async () => {
+    if (!formData.solutionCode) {
+      return toast.error('Please paste your solution code first for AI analysis');
+    }
+
+    setIsAiLoading(true);
+    try {
+      const res = await fetch('/api/problems/ai-suggest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          name: formData.name, 
+          link: formData.link,
+          solutionCode: formData.solutionCode 
+        })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'AI failed');
+      }
+
+      const suggestions = await res.json();
+      
+      setFormData(prev => ({
+        ...prev,
+        topics: Array.from(new Set([...(prev.topics || []), ...(suggestions.topics || [])])),
+        difficulty: suggestions.difficulty || prev.difficulty,
+        patterns: Array.from(new Set([...(prev.patterns || []), ...(suggestions.patterns || [])])),
+        timeComplexity: suggestions.timeComplexity || prev.timeComplexity,
+        spaceComplexity: suggestions.spaceComplexity || prev.spaceComplexity,
+        notes: suggestions.suggestedApproach 
+          ? `AI Suggested Approach:\n${suggestions.suggestedApproach}\n\n${prev.notes || ''}` 
+          : (prev.notes || '')
+      }));
+
+      toast.success('Fields populated with AI suggestions!');
+    } catch (err) {
+      toast.error(err.message || 'AI Extraction failed');
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   // Multiple selection handlers
@@ -60,8 +111,46 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
         <div className="p-6 overflow-y-auto no-scrollbar flex-1 relative">
           <form id="problem-form" onSubmit={handleSubmit} className="space-y-6">
             
-            {/* Core Info */}
+            {/* Solution Code - MOVED TO TOP */}
             <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="section-title text-sm border-l-2 border-brand-500 pl-2 mb-0">Solution / Code</h3>
+                <button
+                  type="button"
+                  onClick={handleAiSuggest}
+                  disabled={isAiLoading || !formData.solutionCode}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand-500/10 text-brand-600 hover:bg-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest border border-brand-500/20"
+                >
+                  {isAiLoading ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={12} className="text-brand-500" />
+                  )}
+                  {isAiLoading ? 'Analyzing...' : 'Fill with AI ✨'}
+                </button>
+              </div>
+              <div className="relative group">
+                <label className="label">Paste your code (Required for AI Analysis)</label>
+                <textarea 
+                  rows="6" 
+                  className="input-field font-mono text-[11px] resize-none py-3 focus:ring-brand-500/20 leading-relaxed no-scrollbar" 
+                  placeholder="Paste your solution here..."
+                  value={formData.solutionCode} 
+                  onChange={e => setFormData({...formData, solutionCode: e.target.value})}
+                  onClick={e => e.stopPropagation()}
+                />
+                {!formData.solutionCode && (
+                  <div className="absolute inset-x-0 bottom-4 flex justify-center pointer-events-none">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 bg-white/80 dark:bg-[#0f1522]/80 px-2 py-0.5 rounded-full border border-slate-100 dark:border-white/[0.04]">
+                      AI needs code to extract complexity & patterns
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Core Info */}
+            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-white/[0.06]">
               <h3 className="section-title text-sm border-l-2 border-brand-500 pl-2">Core Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -125,24 +214,37 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
               </div>
             </div>
 
+
             {/* Tracking */}
             <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-white/[0.06]">
               <h3 className="section-title text-sm border-l-2 border-brand-500 pl-2">Tracking & Meta</h3>
               
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
+                <div className="relative">
                   <label className="label">Time Complexity</label>
-                  <select className="input-field" value={formData.timeComplexity} onChange={e => setFormData({...formData, timeComplexity: e.target.value})}>
-                    <option value="">Unknown</option>
-                    {TIME_COMPLEXITIES.map(tc => <option key={tc} value={tc}>{tc}</option>)}
-                  </select>
+                  <input 
+                    list="time-complexities"
+                    className="input-field" 
+                    placeholder="e.g. O(n)"
+                    value={formData.timeComplexity} 
+                    onChange={e => setFormData({...formData, timeComplexity: e.target.value})} 
+                  />
+                  <datalist id="time-complexities">
+                    {TIME_COMPLEXITIES.map(tc => <option key={tc} value={tc} />)}
+                  </datalist>
                 </div>
-                <div>
+                <div className="relative">
                   <label className="label">Space Complexity</label>
-                  <select className="input-field" value={formData.spaceComplexity} onChange={e => setFormData({...formData, spaceComplexity: e.target.value})}>
-                    <option value="">Unknown</option>
-                    {SPACE_COMPLEXITIES.map(sc => <option key={sc} value={sc}>{sc}</option>)}
-                  </select>
+                  <input 
+                    list="space-complexities"
+                    className="input-field" 
+                    placeholder="e.g. O(1)"
+                    value={formData.spaceComplexity} 
+                    onChange={e => setFormData({...formData, spaceComplexity: e.target.value})} 
+                  />
+                  <datalist id="space-complexities">
+                    {SPACE_COMPLEXITIES.map(sc => <option key={sc} value={sc} />)}
+                  </datalist>
                 </div>
                 <div>
                   <label className="label">Date Solved *</label>
@@ -177,17 +279,14 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-200 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {editProblem && !showConfirmDelete && (
-              <button type="button" onClick={() => setShowConfirmDelete(true)} className="btn-ghost !text-red-500 hover:!bg-red-50 dark:hover:!bg-red-500/10">
+            {editProblem && (
+              <button 
+                type="button" 
+                onClick={handleDelete} 
+                className="btn-ghost !text-red-500 hover:!bg-red-50 dark:hover:!bg-red-500/10 flex items-center gap-2"
+              >
                 <Trash2 size={16} /> Delete
               </button>
-            )}
-            {showConfirmDelete && (
-              <div className="flex items-center gap-2 animate-fade-in bg-red-50 dark:bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-500/20">
-                <span className="text-xs font-bold text-red-600 dark:text-red-400">Are you sure?</span>
-                <button type="button" onClick={handleDelete} className="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-2 py-1 rounded">Yes</button>
-                <button type="button" onClick={() => setShowConfirmDelete(false)} className="text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 px-2 py-1">No</button>
-              </div>
             )}
           </div>
           
@@ -207,5 +306,5 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
 const initialState = {
   name: '', link: '', platform: '', difficulty: '', topics: [], patterns: [],
   status: 'Solved', dateSolved: '', timeComplexity: '', spaceComplexity: '',
-  notes: '', revisionCount: 0, isPOTD: false
+  notes: '', solutionCode: '', revisionCount: 0, isPOTD: false
 };

@@ -29,7 +29,7 @@ export default function TodayDSA() {
             <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Today's DSA
             </h1>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{todayStr}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-600 mt-0.5">{todayStr}</p>
           </div>
         </div>
         <button onClick={openAdd} className="btn-primary"><Plus size={16} /> Add Today's Problem</button>
@@ -83,7 +83,7 @@ function Section({ title, icon, count, empty, items, onEdit, accentColor, glowCo
       <div className="flex items-center gap-2 mb-3">
         {icon}
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">{title}</h2>
-        <span className="text-[10px] bg-surface-200 dark:bg-white/[0.06] px-2 py-0.5 rounded-full font-bold text-slate-500 dark:text-slate-400">
+        <span className="text-[10px] bg-surface-200 dark:bg-white/[0.06] px-2 py-0.5 rounded-full font-bold text-slate-600 dark:text-slate-400">
           {count}
         </span>
       </div>
@@ -106,11 +106,11 @@ function Section({ title, icon, count, empty, items, onEdit, accentColor, glowCo
                 <StatusBadge status={p.status} />
                 <PlatformBadge platform={p.platform} />
               </div>
-              <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
+              <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-600">
                 <span>{p.person || '—'}</span>
                 {p.timeTaken ? <span>⏱ {p.timeTaken}m</span> : null}
               </div>
-              {p.approach && <p className="text-[11px] text-slate-400 dark:text-slate-500 italic line-clamp-2">{p.approach}</p>}
+              {p.approach && <p className="text-[11px] text-slate-400 dark:text-slate-600 italic line-clamp-2">{p.approach}</p>}
             </button>
           ))}
         </div>
