@@ -3,7 +3,7 @@ import { useStore } from '../store/StoreContext.jsx';
 import { DifficultyBadge, StatusBadge, PatternChip } from '../components/Badges.jsx';
 import ProblemModal from '../components/ProblemModal.jsx';
 import EmptyState from '../components/EmptyState.jsx';
-import { ExternalLink, Clock4, User, FolderKanban } from 'lucide-react';
+import { ExternalLink, Clock4, User, FolderKanban, Lightbulb, X } from 'lucide-react';
 
 export default function TopicBoard() {
   const { problems } = useStore();
@@ -11,6 +11,7 @@ export default function TopicBoard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [diffFilter, setDiffFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [approachModal, setApproachModal] = useState({ open: false, problem: null });
 
   const filtered = problems.filter(p => {
     if (diffFilter && p.difficulty !== diffFilter) return false;
@@ -80,7 +81,18 @@ export default function TopicBoard() {
                     hover:-translate-y-0.5 hover:shadow-neon-sm
                     ${p.status === 'Needs Revision' ? 'border-amber-400/30' : ''}`}
                 >
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-2 mb-2">{p.name}</p>
+                  <div className="relative pr-6 mb-2">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-2">{p.name}</p>
+                    {p.approach && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setApproachModal({ open: true, problem: p }); }}
+                        className="absolute -right-1 -top-1 p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-md transition-colors"
+                        title="View Approach & Intuition"
+                      >
+                        <Lightbulb size={14} />
+                      </button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-1 mb-2">
                     <DifficultyBadge difficulty={p.difficulty} />
                     <StatusBadge status={p.status} />
@@ -101,6 +113,35 @@ export default function TopicBoard() {
       )}
 
       <ProblemModal open={modalOpen} onClose={closeModal} editProblem={editProblem} />
+      
+      {approachModal.open && (
+        <div className="modal-overlay z-[100]" onClick={() => setApproachModal({ open: false, problem: null })}>
+          <div className="modal-box flex flex-col max-w-lg w-full" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02]">
+              <h2 className="text-xl font-bold font-outfit tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                <Lightbulb size={20} className="text-amber-500" />
+                Approach & Intuition
+              </h2>
+              <button 
+                onClick={() => setApproachModal({ open: false, problem: null })} 
+                className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] rounded-lg transition-colors"
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="mb-4">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Problem</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{approachModal.problem?.name}</span>
+              </div>
+              <div className="text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
+                {approachModal.problem?.approach || "No approach recorded for this problem yet."}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

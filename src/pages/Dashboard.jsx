@@ -108,8 +108,7 @@ export default function Dashboard() {
     });
     return Object.entries(map)
       .map(([label, counts]) => ({ label, ...counts }))
-      .sort((a, b) => b.tracked - a.tracked)
-      .slice(0, 6);
+      .sort((a, b) => b.tracked - a.tracked);
   }, [problems]);
 
 

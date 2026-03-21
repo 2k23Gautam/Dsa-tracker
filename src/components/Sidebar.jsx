@@ -3,11 +3,12 @@ import { X, LayoutDashboard, List, User, Users, Trello,
   LogOut,
   UserCircle,
   UserPlus,
-  AlertTriangle, Zap, CalendarDays, Sun, Moon, Code2,
+  AlertTriangle, Zap, CalendarDays, Sun, Moon,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useStore } from '../store/StoreContext.jsx';
 import { useAuth } from '../store/AuthContext.jsx';
+import Logo from './Logo.jsx';
 
 const NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -31,15 +32,8 @@ export default function Sidebar({ isOpen, onClose }) {
                       ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       
       {/* Logo Area */}
-      <div className="flex items-center justify-between gap-3 px-6 py-6">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shadow-sm">
-            <Code2 size={16} className="text-white" />
-          </div>
-          <p className="font-outfit font-bold text-slate-900 dark:text-white text-[15px] leading-tight tracking-tight">
-            DSA Tracker
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3 px-6 py-6 group cursor-pointer">
+        <Logo layout="row" title="DSA" highlight="Tracker" />
         <button onClick={onClose} className="md:hidden p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
           <X size={20} />
         </button>

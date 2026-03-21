@@ -24,7 +24,7 @@ async function suggestProblemMetadata(problemInput, solutionCode = "") {
       "patterns": ["Pattern1", "Pattern2"],
       "timeComplexity": "e.g., O(n)",
       "spaceComplexity": "e.g., O(1)",
-      "suggestedApproach": "A 1-2 sentence brief overview of the optimal approach or a quick tip based on the provided solution."
+      "suggestedApproach": "A detailed explanation containing the intuitive thinking process (intuition) behind the optimal approach and the logical approach to solve the problem based on the provided solution."
     }
 
     Rules:

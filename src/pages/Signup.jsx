@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, ArrowRight, Code2, Sparkles, User, Mail, Lock } from 'lucide-react';
+import { UserPlus, ArrowRight, Sparkles, User, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../store/AuthContext.jsx';
 import toast from 'react-hot-toast';
 import ModernLogoBackground from '../components/ModernLogoBackground.jsx';
+import Logo from '../components/Logo.jsx';
 
 export default function Signup() {
   const [name, setName] = useState('');
@@ -45,13 +46,8 @@ export default function Signup() {
         </div>
 
         {/* Logo Header */}
-        <div className="flex flex-col items-center mb-8 animate-fade-in group">
-          <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center mb-4 shadow-xl border border-slate-200 dark:border-white/[0.08] group-hover:scale-110 transition-transform duration-500">
-            <Code2 size={32} className="text-brand-600 dark:text-brand-400" />
-          </div>
-          <h1 className="text-3xl font-bold font-outfit text-slate-900 dark:text-white tracking-tight mb-2">
-            Aspirant <span className="text-brand-600">Onboarding</span>
-          </h1>
+        <div className="flex flex-col items-center mb-8 animate-fade-in group cursor-pointer">
+          <Logo layout="col" title="Aspirant" highlight="Onboarding" />
           <p className="text-slate-500 dark:text-slate-400 text-sm text-center max-w-xs">
             Start your journey towards FAANG today. Build your profile and track every milestone.
           </p>

@@ -1,9 +1,11 @@
-import { ArrowUpDown, Maximize2, Edit2, CheckCircle2, Star } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowUpDown, Maximize2, Edit2, CheckCircle2, Star, Lightbulb, X } from 'lucide-react';
 import { useStore } from '../store/StoreContext.jsx';
 import { DifficultyBadge, PlatformBadge, TopicBadge, PatternBadge } from './Badges.jsx';
 
 export default function ProblemTable({ problems, onEdit }) {
   const { filters, setFilter, togglePOTD } = useStore();
+  const [approachModal, setApproachModal] = useState({ open: false, problem: null });
 
   const handleSort = (key) => {
     if (filters.sortBy === key) {
@@ -45,12 +47,25 @@ export default function ProblemTable({ problems, onEdit }) {
                 {p.status === 'Solved' ? <CheckCircle2 size={16} className="text-emerald-500" /> : <div className="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-600" />}
               </td>
               <td className="table-td font-medium text-slate-900 dark:text-slate-100 max-w-[200px] truncate">
-                {p.link ? (
-                  <a href={p.link} target="_blank" rel="noreferrer" className="hover:text-brand-600 dark:hover:text-brand-400 hover:underline underline-offset-2 flex items-center gap-1.5 transition-colors">
-                    {p.name}
-                    <Maximize2 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </a>
-                ) : p.name}
+                <div className="flex items-center gap-2">
+                  {p.link ? (
+                    <a href={p.link} target="_blank" rel="noreferrer" className="hover:text-brand-600 dark:hover:text-brand-400 hover:underline underline-offset-2 flex items-center gap-1.5 transition-colors truncate">
+                      {p.name}
+                      <Maximize2 size={12} className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    </a>
+                  ) : (
+                    <span className="truncate">{p.name}</span>
+                  )}
+                  {p.approach && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setApproachModal({ open: true, problem: p }); }}
+                      className="p-1 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded transition-colors shrink-0"
+                      title="View Approach & Intuition"
+                    >
+                      <Lightbulb size={14} />
+                    </button>
+                  )}
+                </div>
               </td>
               <td className="table-td"><PlatformBadge platform={p.platform} /></td>
               <td className="table-td"><DifficultyBadge difficulty={p.difficulty} /></td>
@@ -94,6 +109,31 @@ export default function ProblemTable({ problems, onEdit }) {
       <div className="py-3 px-4 text-xs text-slate-500 font-medium">
         {problems.length} problem{problems.length !== 1 ? 's' : ''} shown
       </div>
+
+      {approachModal.open && (
+        <div className="modal-overlay z-[100]" onClick={() => setApproachModal({ open: false, problem: null })}>
+          <div className="modal-box flex flex-col max-w-lg w-full" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02]">
+              <h2 className="text-xl font-bold font-outfit tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                <Lightbulb size={20} className="text-amber-500" />
+                Approach & Intuition
+              </h2>
+              <button onClick={() => setApproachModal({ open: false, problem: null })} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] rounded-lg transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="mb-4">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Problem</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{approachModal.problem?.name}</span>
+              </div>
+              <div className="text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
+                {approachModal.problem?.approach || "No approach recorded for this problem yet."}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

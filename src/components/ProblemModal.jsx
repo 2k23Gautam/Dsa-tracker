@@ -68,9 +68,8 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
         patterns: Array.from(new Set([...(prev.patterns || []), ...(suggestions.patterns || [])])),
         timeComplexity: suggestions.timeComplexity || prev.timeComplexity,
         spaceComplexity: suggestions.spaceComplexity || prev.spaceComplexity,
-        notes: suggestions.suggestedApproach 
-          ? `AI Suggested Approach:\n${suggestions.suggestedApproach}\n\n${prev.notes || ''}` 
-          : (prev.notes || '')
+        approach: suggestions.suggestedApproach || prev.approach,
+        notes: prev.notes
       }));
 
       toast.success('Fields populated with AI suggestions!');
@@ -259,6 +258,12 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
               </div>
 
               <div>
+                <label className="label">Approach (Intuition & Logic)</label>
+                <textarea rows="4" className="input-field resize-none py-3" placeholder="Explain the intuition and logical steps to solve..."
+                  value={formData.approach} onChange={e => setFormData({...formData, approach: e.target.value})} />
+              </div>
+
+              <div>
                 <label className="label">Notes / Learnings</label>
                 <textarea rows="3" className="input-field resize-none py-3" placeholder="What did you learn from this problem? Edge cases?"
                   value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
@@ -306,5 +311,5 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
 const initialState = {
   name: '', link: '', platform: '', difficulty: '', topics: [], patterns: [],
   status: 'Solved', dateSolved: '', timeComplexity: '', spaceComplexity: '',
-  notes: '', solutionCode: '', revisionCount: 0, isPOTD: false
+  approach: '', notes: '', solutionCode: '', revisionCount: 0, isPOTD: false
 };

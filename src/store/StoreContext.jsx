@@ -230,14 +230,22 @@ export function StoreProvider({ children }) {
       const isAlreadyTracked = problems.some(p => {
         const nameMatch = p.name.trim().toLowerCase() === rs.title.trim().toLowerCase();
         
-        // Extract slug from link if possible
-        let linkSlug = '';
+        let linkMatch = false;
         if (p.link) {
-           const parts = p.link.split('/').filter(Boolean);
-           linkSlug = parts[parts.length - 1];
+          try {
+            const url = new URL(p.link);
+            const paths = url.pathname.split('/').filter(Boolean);
+            const probIdx = paths.indexOf('problems');
+            if (probIdx !== -1 && probIdx + 1 < paths.length) {
+              linkMatch = paths[probIdx + 1].toLowerCase() === rs.titleSlug.toLowerCase();
+            } else {
+              linkMatch = paths.some(segment => segment.toLowerCase() === rs.titleSlug.toLowerCase());
+            }
+          } catch(e) {
+            linkMatch = p.link.toLowerCase().includes(`/problems/${rs.titleSlug.toLowerCase()}/`) || 
+                        p.link.toLowerCase().endsWith(`/problems/${rs.titleSlug.toLowerCase()}`);
+          }
         }
-
-        const linkMatch = (p.link && p.link.includes(rs.titleSlug)) || (linkSlug === rs.titleSlug);
         
         return nameMatch || linkMatch;
       });
