@@ -32,6 +32,24 @@ const upload = multer({
     cb(new Error('Only images (jpg, png, webp) are allowed'));
   }
 });
+// @route   POST /api/users/update-handles
+// @desc    Update user platform handles
+// @access  Private
+router.post('/update-handles', auth, async (req, res) => {
+  try {
+    const { leetcodeUsername, codeforcesHandle } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (leetcodeUsername !== undefined) user.leetcodeUsername = leetcodeUsername;
+    if (codeforcesHandle !== undefined) user.codeforcesHandle = codeforcesHandle;
+    
+    await user.save();
+    res.json({ message: 'Handles updated', user });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // @route   POST /api/users/profile-image
 // @desc    Upload profile image

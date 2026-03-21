@@ -201,6 +201,34 @@ export function StoreProvider({ children }) {
         }
       }
 
+      // 2. Codeforces - fetch recent AC submissions from their public API
+      if (authUser?.codeforcesHandle) {
+        try {
+          const cfRes = await fetch(
+            `https://codeforces.com/api/user.status?handle=${authUser.codeforcesHandle}&from=1&count=30`
+          );
+          if (cfRes.ok) {
+            const cfJson = await cfRes.json();
+            if (cfJson.status === 'OK') {
+              const acSubmissions = cfJson.result
+                .filter(s => s.verdict === 'OK')
+                .map(s => ({
+                  platform: 'Codeforces',
+                  title: s.problem.name,
+                  titleSlug: `${s.problem.contestId}-${s.problem.index}`,
+                  timestamp: s.creationTimeSeconds * 1000,
+                  difficulty: s.problem.rating
+                    ? s.problem.rating < 1400 ? 'Easy' : s.problem.rating < 2000 ? 'Medium' : 'Hard'
+                    : 'Medium',
+                }));
+              combined = [...combined, ...acSubmissions];
+            }
+          }
+        } catch (cfErr) {
+          console.warn('CF submission fetch failed:', cfErr);
+        }
+      }
+
       setRawAllSubmissions(combined);
       setLastSyncTime(Date.now());
     } catch (err) {
@@ -211,45 +239,43 @@ export function StoreProvider({ children }) {
   const detectedSubmissions = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayTimestamp = today.getTime() / 1000;
+    const todayTimestamp = today.getTime();
 
     return rawAllSubmissions.filter(rs => {
-      const isLeetCode = rs.platform === 'LeetCode';
-      if (!isLeetCode) return false;
-
-      // Must be from today
+      // Normalize timestamp to milliseconds
+      // LeetCode returns epoch in seconds; CF already stored as ms (we multiplied ×1000 above)
       const rawTs = parseInt(rs.timestamp);
-      // LeetCode returns seconds. If > 10^10, it's likely milliseconds.
-      const ts = rawTs > 10000000000 ? rawTs / 1000 : rawTs;
+      const tsMs = rawTs > 1_000_000_000_000 ? rawTs : rawTs * 1000;
 
-      if (ts < todayTimestamp) return false;
-      
+      if (tsMs < todayTimestamp) return false;
       if (dismissedSlugs.includes(rs.titleSlug)) return false;
-      
-      // Link or Title check
+
+      // Deduplicate against already-tracked problems
       const isAlreadyTracked = problems.some(p => {
         const nameMatch = p.name.trim().toLowerCase() === rs.title.trim().toLowerCase();
-        
         let linkMatch = false;
         if (p.link) {
           try {
             const url = new URL(p.link);
             const paths = url.pathname.split('/').filter(Boolean);
-            const probIdx = paths.indexOf('problems');
-            if (probIdx !== -1 && probIdx + 1 < paths.length) {
-              linkMatch = paths[probIdx + 1].toLowerCase() === rs.titleSlug.toLowerCase();
-            } else {
-              linkMatch = paths.some(segment => segment.toLowerCase() === rs.titleSlug.toLowerCase());
+            if (rs.platform === 'LeetCode') {
+              const probIdx = paths.indexOf('problems');
+              if (probIdx !== -1 && probIdx + 1 < paths.length) {
+                linkMatch = paths[probIdx + 1].toLowerCase() === rs.titleSlug.toLowerCase();
+              } else {
+                linkMatch = paths.some(seg => seg.toLowerCase() === rs.titleSlug.toLowerCase());
+              }
+            } else if (rs.platform === 'Codeforces') {
+              linkMatch = p.link.includes(`codeforces.com`) &&
+                paths.some(seg => seg.toLowerCase() === rs.titleSlug.split('-')[1]?.toLowerCase());
             }
-          } catch(e) {
-            linkMatch = p.link.toLowerCase().includes(`/problems/${rs.titleSlug.toLowerCase()}/`) || 
-                        p.link.toLowerCase().endsWith(`/problems/${rs.titleSlug.toLowerCase()}`);
+          } catch {
+            linkMatch = p.link.toLowerCase().includes(rs.titleSlug.toLowerCase());
           }
         }
-        
         return nameMatch || linkMatch;
       });
-      
+
       return !isAlreadyTracked;
     });
   }, [rawAllSubmissions, problems, dismissedSlugs]);

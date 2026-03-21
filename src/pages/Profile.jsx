@@ -12,6 +12,7 @@ export default function Profile() {
   const fileInputRef = useRef(null);
   
   const [lcHandle, setLcHandle] = useState(authUser?.leetcodeUsername || '');
+  const [cfHandle, setCfHandle] = useState(authUser?.codeforcesHandle || '');
 
   const handleUpdateHandles = async (e) => {
     e.preventDefault();
@@ -25,6 +26,7 @@ export default function Profile() {
         },
         body: JSON.stringify({
           leetcodeUsername: lcHandle,
+          codeforcesHandle: cfHandle,
         })
       });
       const data = await res.json();
@@ -165,6 +167,22 @@ export default function Profile() {
                 </div>
               </div>
 
+              <div className="p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] group focus-within:border-brand-500/50 transition-all">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Codeforces Handle</label>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                    <Globe size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    value={cfHandle}
+                    onChange={(e) => setCfHandle(e.target.value)}
+                    placeholder="e.g. tourist"
+                    className="flex-1 bg-transparent border-none outline-none text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300"
+                  />
+                </div>
+              </div>
+
               <div className="flex justify-end border-t border-slate-200 dark:border-white/5 pt-6">
                 <button
                   type="submit"
@@ -187,6 +205,7 @@ export default function Profile() {
              <div className="space-y-4">
                 {[
                   { label: 'LeetCode', handle: authUser?.leetcodeUsername },
+                  { label: 'Codeforces', handle: authUser?.codeforcesHandle },
                 ].map((p) => (
                  <div key={p.label} className={`p-4 rounded-2xl border transition-all ${p.handle ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-slate-500/5 border-slate-500/10 opacity-60'}`}>
                     <div className="flex items-center justify-between">

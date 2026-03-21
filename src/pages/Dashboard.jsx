@@ -7,6 +7,8 @@ import { useAuth } from '../store/AuthContext.jsx';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import ProblemModal from '../components/ProblemModal.jsx';
 import CircularProgress from '../components/CircularProgress.jsx';
+import CodeforcesTabContent from '../components/CodeforcesTabContent.jsx';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { BAR_COLORS } from '../store/data.js';
 
@@ -58,9 +60,12 @@ export default function Dashboard() {
     } catch (e) { console.error('Dismiss error:', e); }
   };
 
+  const [activeTab, setActiveTab] = useState(authUser?.leetcodeUsername ? 'LeetCode' : 'Codeforces');
+
   const connectedPlatforms = useMemo(() => {
     const list = [];
     if (authUser?.leetcodeUsername) list.push({ name: 'LeetCode', handle: authUser.leetcodeUsername, stats: authUser.leetcodeStats });
+    if (authUser?.codeforcesHandle) list.push({ name: 'Codeforces', handle: authUser.codeforcesHandle });
     return list;
   }, [authUser]);
 
@@ -269,69 +274,126 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Platform Insights Hub */}
-      <div className="gradient-glass p-5 flex flex-col md:flex-row items-center justify-between gap-6 border-l-4 border-brand-500/50">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center text-brand-500">
-            <Globe size={24} />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <h2 className="text-lg font-bold text-slate-800 dark:text-white">Platform Insights</h2>
-              {authUser?.leetcodeUsername && <span className="text-[9px] bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-black uppercase tracking-tighter">LeetCode</span>}
+      {/* Unified Insights Hub with Animated Tabs */}
+      <div className="gradient-glass p-6 md:p-8 flex flex-col gap-8 border-l-4 border-emerald-500/50 relative overflow-hidden">
+        
+        {/* Glow Effects corresponding to active tab */}
+        <div className={`absolute -right-20 -top-20 w-64 h-64 rounded-full blur-[100px] transition-colors duration-1000 z-0 ${activeTab === 'LeetCode' ? 'bg-blue-500/20' : 'bg-amber-500/20'}`} />
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10 w-full">
+          <div className="flex items-center gap-4">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-500 shadow-lg ${activeTab === 'LeetCode' ? 'bg-blue-500/10 text-blue-500 shadow-blue-500/10' : 'bg-amber-500/10 text-amber-500 shadow-amber-500/10'}`}>
+              <Globe size={28} />
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              {authUser?.leetcodeUsername
-                ? `Your LeetCode progress is unified and real-time. ${timeLeft}`
-                : "Connect your LeetCode account in Profile to see automated insights"}
-            </p>
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold font-outfit text-slate-800 dark:text-white tracking-tight">Platform Insights</h2>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                {connectedPlatforms.length > 0
+                  ? `Unified real-time tracking. ${timeLeft}`
+                  : "Connect your accounts in Profile to see automated insights"}
+              </p>
+            </div>
           </div>
+
+          {/* Smart Tab Switcher */}
+          {connectedPlatforms.length > 1 && (
+            <div className="flex p-1.5 bg-slate-200/50 dark:bg-slate-800/50 rounded-xl overflow-hidden shadow-inner border border-slate-200/50 dark:border-white/[0.03]">
+              {connectedPlatforms.map(p => (
+                <button
+                  key={p.name}
+                  onClick={() => setActiveTab(p.name)}
+                  className={`relative px-6 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-all duration-300 z-10 ${activeTab === p.name ? (p.name === 'LeetCode' ? 'text-blue-500' : 'text-amber-500') : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                >
+                  {activeTab === p.name && (
+                    <motion.div 
+                      layoutId="insightTabBg" 
+                      className={`absolute inset-0 shadow-sm rounded-lg -z-10 ${p.name === 'LeetCode' ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-amber-500/10 border border-amber-500/20'}`} 
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {connectedPlatforms.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-6 md:gap-8 pr-4 w-full md:w-auto">
-            {connectedPlatforms.map((platform) => {
-              const stats = platform.stats?.matchedUser?.submitStats?.acSubmissionNum || [];
-              const solved = stats[0]?.count || 0;
-              const rating = platform.stats?.userContestRanking ? Math.round(platform.stats.userContestRanking.rating) : null;
-              const rank = platform.stats?.userContestRanking?.globalRanking || null;
+        {/* Dynamic Tab Content Area */}
+        <div className="relative z-10 w-full min-h-[80px]">
+          {connectedPlatforms.length === 0 ? (
+            <div className="flex">
+              <NavLink to="/profile" className="px-8 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold transition-all shadow-lg shadow-emerald-500/20">
+                Connect Platforms Here
+              </NavLink>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              {activeTab === 'LeetCode' && (
+                <motion.div 
+                  key="leetcodeTab"
+                  initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.2 }}
+                  className="flex flex-wrap items-center gap-8 w-full"
+                >
+                  {(() => {
+                    const lcPlatform = connectedPlatforms.find(p => p.name === 'LeetCode');
+                    if (!lcPlatform) return null;
+                    const stats = lcPlatform.stats?.matchedUser?.submitStats?.acSubmissionNum || [];
+                    const solved = stats[0]?.count || 0;
+                    const rating = lcPlatform.stats?.userContestRanking ? Math.round(lcPlatform.stats.userContestRanking.rating) : null;
+                    const rank = lcPlatform.stats?.userContestRanking?.globalRanking || null;
+                    
+                    return (
+                      <>
+                        <div className="flex items-center gap-4 border-r border-slate-200 dark:border-white/10 pr-8">
+                          <img src={`https://leetcard.jacoblin.cool/${lcPlatform.handle}?ext=png`} className="w-12 h-12 object-cover rounded-xl shadow-sm opacity-0 absolute" />
+                          <div>
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                              {lcPlatform.handle}
+                            </h3>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-0.5">LeetCode Member</p>
+                          </div>
+                        </div>
 
-              return (
-                <div key={platform.name} className="flex items-center gap-6 py-2 border-r last:border-0 border-slate-200 dark:border-white/10 pr-6 mr-2">
-                   <div className="text-center">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{platform.name} ({platform.handle})</p>
-                    <div className="flex items-baseline gap-2">
-                       <p className="text-xl font-black text-slate-900 dark:text-white">{solved > 0 ? solved : '--'}</p>
-                       <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">Solved</span>
-                    </div>
-                  </div>
+                        <div className="text-center border-r border-slate-200 dark:border-white/10 pr-8">
+                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Solved</p>
+                           <p className="text-xl font-bold text-blue-500 flex items-baseline justify-center gap-1">
+                             {solved > 0 ? solved : '--'}
+                           </p>
+                        </div>
 
-                  {rating && (
-                    <div className="text-center opacity-80 pt-1">
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Rating</p>
-                      <p className="text-sm font-bold text-brand-500">{rating}</p>
-                    </div>
-                  )}
-                  {rank && (
-                    <div className="text-center opacity-80 pt-1">
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Rank</p>
-                      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                        #{rank.toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            <a href={`https://leetcode.com/${authUser.leetcodeUsername}`} target="_blank" rel="noreferrer" className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 transition-colors ml-auto">
-              <ExternalLink size={18} />
-            </a>
-          </div>
-        ) : (
-          <NavLink to="/profile" className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold transition-all shadow-lg shadow-amber-500/20">
-            Connect Now
-          </NavLink>
-        )}
+                        {rating && (
+                          <div className="text-center border-r border-slate-200 dark:border-white/10 pr-8">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Contest Rating</p>
+                            <p className="text-xl font-bold text-emerald-500">{rating}</p>
+                          </div>
+                        )}
+                        
+                        {rank && (
+                          <div className="text-center pr-8">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Global Rank</p>
+                            <p className="text-xl font-bold text-slate-700 dark:text-slate-300">
+                              #{rank.toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+
+                        <a href={`https://leetcode.com/${lcPlatform.handle}`} target="_blank" rel="noreferrer" className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors ml-auto mr-2">
+                          <ExternalLink size={18} />
+                        </a>
+                      </>
+                    );
+                  })()}
+                </motion.div>
+              )}
+
+              {activeTab === 'Codeforces' && (
+                <CodeforcesTabContent key="cfTab" handle={authUser?.codeforcesHandle} />
+              )}
+            </AnimatePresence>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -481,13 +543,13 @@ export default function Dashboard() {
                       style={{ backgroundColor: pctColor }}
                     />
 
-                    {/* Top: name + percentage */}
-                    <div className="flex items-start justify-between gap-1 relative z-10">
-                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight line-clamp-2">
+                    {/* Top: name + percentage — stacked to handle long names gracefully */}
+                    <div className="flex flex-col gap-0.5 relative z-10 min-w-0">
+                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 leading-tight truncate w-full" title={topic.label}>
                         {topic.label}
                       </span>
                       <span
-                        className="text-base font-black leading-none flex-shrink-0 ml-1"
+                        className="text-base font-black leading-none"
                         style={{ color: pctColor }}
                       >
                         {solvedPct}%

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Save, Trash2, Sparkles, Loader2 } from 'lucide-react';
 import { useStore } from '../store/StoreContext.jsx';
 import { useAuth } from '../store/AuthContext.jsx';
@@ -7,10 +7,23 @@ import TagInput from './TagInput.jsx';
 import toast from 'react-hot-toast';
 
 export default function ProblemModal({ open, onClose, editProblem = null, initialData = null }) {
-  const { addProblem, updateProblem, deleteProblem, authUser } = useStore();
+  const { problems, addProblem, updateProblem, deleteProblem, authUser } = useStore();
   const { token } = useAuth();
   const [formData, setFormData] = useState({ ...initialState });
   const [isAiLoading, setIsAiLoading] = useState(false);
+
+  // Dynamically extract custom topics & patterns from user's problems
+  const dynamicTopics = useMemo(() => {
+    const custom = new Set();
+    problems?.forEach(p => p.topics?.forEach(t => custom.add(t)));
+    return Array.from(new Set([...TOPICS, ...custom])).sort();
+  }, [problems]);
+
+  const dynamicPatterns = useMemo(() => {
+    const custom = new Set();
+    problems?.forEach(p => p.patterns?.forEach(pt => custom.add(pt)));
+    return Array.from(new Set([...PATTERNS, ...custom])).sort();
+  }, [problems]);
 
   useEffect(() => {
     if (open) {
@@ -195,7 +208,7 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
               <div>
                 <label className="label mb-2">Topics</label>
                 <TagInput 
-                  options={TOPICS} 
+                  options={dynamicTopics} 
                   selected={formData.topics} 
                   onChange={v => setFormData(prev => ({ ...prev, topics: v }))} 
                   placeholder="Search and select topics..." 
@@ -205,7 +218,7 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
               <div>
                 <label className="label mb-2">Patterns</label>
                 <TagInput 
-                  options={PATTERNS} 
+                  options={dynamicPatterns} 
                   selected={formData.patterns} 
                   onChange={v => setFormData(prev => ({ ...prev, patterns: v }))} 
                   placeholder="Search and select patterns..." 

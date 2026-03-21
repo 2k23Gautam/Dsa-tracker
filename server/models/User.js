@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   leetcodeUsername: { type: String, default: "" },
+  codeforcesHandle: { type: String, default: "" },
   profileImage: { type: String, default: "" },
   leetcodeStats: { type: Object, default: null },
   platformStats: { 

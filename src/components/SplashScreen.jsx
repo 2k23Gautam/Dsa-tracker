@@ -1,36 +1,95 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Logo from './Logo.jsx';
 
 export default function SplashScreen() {
+  useEffect(() => {
+    // Attempt to play internal Web Audio synth
+    const playSound = () => {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        // Fast, high-energy 3D "swoosh"
+        osc.type = 'triangle'; 
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.3); // sweeps down fast for a "passing by" sound
+        
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.05); 
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4); 
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      } catch(e) {
+        console.log('Audio autoplay blocked by browser policy without interaction.');
+      }
+    };
+    
+    // Micro-delay sometimes helps bypass developer-mode browser heuristics
+    setTimeout(playSound, 50);
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.6, ease: "easeInOut" }}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-50 dark:bg-[#020617]"
+      exit={{ opacity: 0, transition: { duration: 0.6 } }} // Background just fades out cleanly
+      className="fixed inset-0 z-[9999] bg-white/90 dark:bg-[#020617]/90 backdrop-blur-md flex items-center justify-center overflow-hidden"
+      style={{ perspective: 1200 }}
     >
       <motion.div
-        initial={{ scale: 0.85, opacity: 0, filter: 'blur(12px)' }}
-        animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
-        transition={{ 
-          duration: 0.8, 
-          ease: [0.16, 1, 0.3, 1] // Custom snappy ease wrapper
+        initial={{ rotateY: -180, scale: 0, opacity: 0, z: -500 }}
+        animate={{ rotateY: 0, scale: 1, opacity: 1, z: 0 }}
+        exit={{ 
+          rotateY: 75, 
+          scale: 3, 
+          x: '150vw', 
+          z: 500,
+          opacity: 0, 
+          transition: { duration: 0.5, ease: "backIn" } 
         }}
-        className="flex flex-col items-center gap-8"
+        transition={{ 
+          type: "spring", 
+          stiffness: 250, 
+          damping: 20, 
+          mass: 1 
+        }}
+        className="flex flex-col items-center gap-8 relative"
+        style={{ transformStyle: "preserve-3d" }}
       >
         <Logo layout="col" title="DSA" highlight="Tracker" />
         
-        {/* Loading Indicator */}
+        {/* Futuristic glowing core underneath the logo */}
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="flex items-center gap-2"
-        >
-          <div className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-          <div className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-          <div className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-bounce" />
-        </motion.div>
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+          transition={{ repeat: Infinity, duration: 1, ease: "easeInOut" }}
+          className="absolute top-0 -z-10 w-32 h-32 bg-brand-500/20 rounded-full blur-2xl"
+        />
+
+        {/* Premium 3D Atom Loading Rings */}
+        <div className="relative w-16 h-16">
+          <motion.div 
+            animate={{ rotateX: 360, rotateZ: 360 }}
+            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+            className="absolute inset-0 border-2 border-brand-500/30 border-t-brand-500 rounded-full"
+            style={{ transformStyle: "preserve-3d" }}
+          />
+          <motion.div 
+            animate={{ rotateY: 360, rotateZ: -360 }}
+            transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+            className="absolute inset-1 border-2 border-amber-400/30 border-b-amber-400 rounded-full"
+            style={{ transformStyle: "preserve-3d" }}
+          />
+        </div>
+
       </motion.div>
     </motion.div>
   );

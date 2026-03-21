@@ -26,11 +26,12 @@ router.get('/stats/:platform/:handle', auth, async (req, res) => {
 
 // @route   POST /api/platforms/sync-all
 router.post('/sync-all', auth, async (req, res) => {
-  const { leetcode } = req.body;
+  const { leetcode, codeforces } = req.body;
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (leetcode !== undefined) user.leetcodeUsername = leetcode;
+    if (codeforces !== undefined) user.codeforcesHandle = codeforces;
     await user.save();
     return res.json({ message: 'Handles updated successfully', user });
   } catch (err) {
