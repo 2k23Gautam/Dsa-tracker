@@ -69,7 +69,7 @@ export default function SolvedCalendar() {
           </div>
 
           {/* Days grid */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-2">
             {days.map((day) => {
               const ds = format(day, 'yyyy-MM-dd');
               const count = byDate[ds]?.length || 0;
@@ -78,29 +78,31 @@ export default function SolvedCalendar() {
               const isSelected = ds === selected;
 
               const intensity = count === 0 ? 0 : Math.ceil((count / max) * 4);
-              const bgClass = !inMonth ? 'opacity-20' : [
-                '',
-                'bg-brand-500/15',
-                'bg-brand-500/30',
-                'bg-brand-500/50',
-                'bg-brand-500/70',
+              const bgClass = !inMonth ? 'opacity-30 bg-transparent' : [
+                'bg-slate-100/50 dark:bg-white/[0.02] border border-slate-200/50 dark:border-white/[0.04]',
+                'bg-brand-500/10 border border-brand-500/10',
+                'bg-brand-500/25 border border-brand-500/25',
+                'bg-brand-500/50 border border-brand-500/30',
+                'bg-gradient-to-br from-brand-500 to-brand-600 shadow-md shadow-brand-500/20 border border-brand-300/30',
               ][intensity];
 
               return (
                 <button
                   key={ds}
                   onClick={() => inMonth && setSelected(isSelected ? null : ds)}
-                  className={`aspect-square flex flex-col items-center justify-center rounded-xl text-xs transition-all duration-200
+                  className={`aspect-square flex flex-col items-center justify-center rounded-2xl text-xs transition-all duration-300
                     ${bgClass}
-                    ${isToday ? 'ring-2 ring-brand-400 shadow-neon-sm' : ''}
-                    ${isSelected ? 'ring-2 ring-neon-cyan scale-110 shadow-neon-cyan' : ''}
-                    ${inMonth ? 'hover:ring-1 hover:ring-brand-400/50 cursor-pointer' : 'cursor-default'}
-                    ${!inMonth ? 'text-slate-600' : count > 0 ? 'text-white font-semibold' : 'text-slate-500 dark:text-slate-400'}
+                    ${isToday ? 'ring-2 ring-brand-500/50 shadow-lg shadow-brand-500/10' : ''}
+                    ${isSelected ? 'ring-2 ring-brand-500 scale-105 shadow-xl shadow-brand-500/20 z-10' : 'border border-transparent'}
+                    ${inMonth ? 'hover:scale-105 hover:shadow-lg hover:shadow-brand-500/5 cursor-pointer' : 'cursor-default'}
+                    ${!inMonth ? 'text-slate-300 dark:text-slate-700' : count > 0 ? 'text-white font-black' : 'text-slate-600 dark:text-slate-400 font-bold'}
                   `}
                 >
-                  <span>{format(day, 'd')}</span>
+                  <span className={count > 0 && inMonth ? 'text-[11px]' : ''}>{format(day, 'd')}</span>
                   {count > 0 && inMonth && (
-                    <span className="text-[9px] font-bold leading-none opacity-80">{count}</span>
+                    <span className="text-[9px] font-black leading-none bg-black/10 px-1.5 py-0.5 rounded-full mt-1">
+                      {count}
+                    </span>
                   )}
                 </button>
               );
@@ -108,12 +110,18 @@ export default function SolvedCalendar() {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center gap-2 mt-4 justify-center">
-            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">Less</span>
-            {['bg-brand-500/15', 'bg-brand-500/30', 'bg-brand-500/50', 'bg-brand-500/70'].map((c, i) => (
-              <div key={i} className={`w-4 h-4 rounded-md ${c}`} />
+          <div className="flex items-center gap-2 mt-6 justify-center">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Empty</span>
+            {[
+              'bg-slate-100 dark:bg-white/[0.04]',
+              'bg-brand-500/10',
+              'bg-brand-500/25',
+              'bg-brand-500/50',
+              'bg-gradient-to-br from-brand-500 to-brand-600'
+            ].map((c, i) => (
+              <div key={i} className={`w-3.5 h-3.5 rounded-md ${c} border border-black/5 dark:border-white/5`} />
             ))}
-            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">More</span>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">High</span>
           </div>
         </div>
 
@@ -132,15 +140,22 @@ export default function SolvedCalendar() {
               </p>
               <div className="space-y-2 overflow-y-auto max-h-80">
                 {selectedProblems.map(p => (
-                  <div key={p.id} className="p-3 rounded-xl bg-surface-50 dark:bg-white/[0.03] border border-surface-200/50 dark:border-white/[0.04] space-y-1.5 transition-all duration-200 hover:border-brand-500/20">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-2">{p.name}</p>
-                    <div className="flex flex-wrap gap-1">
-                      <DifficultyBadge difficulty={p.difficulty} />
-                      <StatusBadge status={p.status} />
+                  <div key={p.id} className={`p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05] space-y-2.5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-brand-500/5 hover:border-brand-500/20 group relative overflow-hidden border-l-4 ${p.platform?.toLowerCase() === 'leetcode' ? 'border-l-blue-500' : 'border-l-amber-500'}`}>
+                    <div className="flex justify-between items-start gap-3">
+                      <p className="text-sm font-black text-slate-800 dark:text-white line-clamp-2 leading-tight group-hover:text-brand-500 transition-colors">{p.name}</p>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${p.platform?.toLowerCase() === 'leetcode' ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                        {p.platform}
+                      </span>
                     </div>
-                    <div className="flex justify-between text-[11px] text-slate-400 dark:text-slate-500">
-                      <span>{p.person || '—'}</span>
-                      <span>{p.platform}</span>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-1.5">
+                        <DifficultyBadge difficulty={p.difficulty} />
+                        <StatusBadge status={p.status} />
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
+                        {p.person || '—'}
+                      </span>
                     </div>
                   </div>
                 ))}

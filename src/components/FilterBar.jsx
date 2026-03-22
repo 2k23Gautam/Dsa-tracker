@@ -1,9 +1,23 @@
 import { Search, Filter, SlidersHorizontal, Sun, Calendar } from 'lucide-react';
 import { useStore } from '../store/StoreContext.jsx';
 import { DIFFICULTIES, STATUSES, TOPICS, PATTERNS } from '../store/data.js';
+import { useMemo } from 'react';
 
 export default function FilterBar({ searchQuery, setSearchQuery }) {
-  const { filters, setFilter, togglePOTD, setDateRange } = useStore();
+  const { filters, setFilter, togglePOTD, setDateRange, problems } = useStore();
+
+  // Dynamically extract custom topics from user's problems
+  const dynamicTopics = useMemo(() => {
+    const custom = new Set();
+    problems?.forEach(p => p.topics?.forEach(t => custom.add(t)));
+    return Array.from(new Set([...TOPICS, ...custom])).sort();
+  }, [problems]);
+
+  const dynamicPatterns = useMemo(() => {
+    const custom = new Set();
+    problems?.forEach(p => p.patterns?.forEach(pt => custom.add(pt)));
+    return Array.from(new Set([...PATTERNS, ...custom])).sort();
+  }, [problems]);
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -65,7 +79,7 @@ export default function FilterBar({ searchQuery, setSearchQuery }) {
                 onChange={(e) => setFilter('topic', e.target.value)}
               >
                 <option value="All">All Topics</option>
-                {TOPICS.map(t => <option key={t} value={t}>{t}</option>)}
+                {dynamicTopics.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
 
@@ -77,7 +91,7 @@ export default function FilterBar({ searchQuery, setSearchQuery }) {
                 onChange={(e) => setFilter('pattern', e.target.value)}
               >
                 <option value="All">All Patterns</option>
-                {PATTERNS.map(p => <option key={p} value={p}>{p}</option>)}
+                {dynamicPatterns.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
           </div>

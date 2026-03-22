@@ -66,13 +66,13 @@ export default function FriendProfile() {
       </div>
 
       {/* Graph Section */}
-      <div className="glass-card p-6 flex flex-col h-[400px]">
+      <div className="glass-card p-6 flex flex-col">
         <h2 className="section-title flex items-center gap-2 mb-6">
           <TrendingUp size={18} className="text-brand-500" />
           Topic Mastery
         </h2>
         
-        <div className="flex-1 w-full min-h-0 -ml-4">
+        <div className="w-full -ml-4" style={{ height: `${Math.max(300, (topicProgress?.length || 0) * 35 + 60)}px` }}>
           {topicProgress.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={topicProgress} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }} barSize={16}>

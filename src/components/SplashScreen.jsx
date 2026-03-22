@@ -4,37 +4,7 @@ import Logo from './Logo.jsx';
 
 export default function SplashScreen() {
   useEffect(() => {
-    // Attempt to play internal Web Audio synth
-    const playSound = () => {
-      try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
-
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        // Fast, high-energy 3D "swoosh"
-        osc.type = 'triangle'; 
-        osc.frequency.setValueAtTime(800, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.3); // sweeps down fast for a "passing by" sound
-        
-        gain.gain.setValueAtTime(0, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.05); 
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4); 
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        osc.start();
-        osc.stop(ctx.currentTime + 0.4);
-      } catch(e) {
-        console.log('Audio autoplay blocked by browser policy without interaction.');
-      }
-    };
-    
-    // Micro-delay sometimes helps bypass developer-mode browser heuristics
-    setTimeout(playSound, 50);
+    // Sound effects removed
   }, []);
 
   return (
