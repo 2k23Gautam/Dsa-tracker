@@ -24,8 +24,14 @@ export default function Friends() {
         fetch('/api/users/pending-requests', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
 
-      if (friendsRes.ok) setFriends(await friendsRes.json());
-      if (requestsRes.ok) setRequests(await requestsRes.json());
+      if (friendsRes.ok) {
+        const data = await friendsRes.json();
+        setFriends(data.filter(Boolean));
+      }
+      if (requestsRes.ok) {
+        const data = await requestsRes.json();
+        setRequests(data.filter(Boolean));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -46,6 +52,22 @@ export default function Friends() {
       }
     } catch (err) {
       toast.error('Failed to accept request');
+    }
+  };
+
+  const handleReject = async (requestId) => {
+    try {
+      const res = await fetch(`/api/users/reject-request/${requestId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        toast.success('Friend request rejected');
+        fetchData();
+        refreshUser();
+      }
+    } catch (err) {
+      toast.error('Failed to reject request');
     }
   };
 
@@ -128,6 +150,7 @@ export default function Friends() {
                           strokeWidth={5}
                           color="#f59e0b"
                           label=""
+                          noCard={true}
                        />
                     </div>
                     <div className="bg-slate-50 dark:bg-white/[0.03] p-3 rounded-2xl border border-slate-100 dark:border-white/[0.05] flex flex-col items-center">
@@ -139,6 +162,7 @@ export default function Friends() {
                           strokeWidth={5}
                           color="#3b82f6"
                           label=""
+                          noCard={true}
                        />
                     </div>
                   </div>
@@ -181,11 +205,11 @@ export default function Friends() {
                 <div key={req._id} className="glass-card p-4 hover:border-emerald-500/30 transition-all flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/[0.04] flex items-center justify-center text-slate-600 dark:text-slate-200 font-bold border border-slate-200 dark:border-white/[0.08]">
-                      {req.from.name[0].toUpperCase()}
+                      {req.from?.name ? req.from.name[0].toUpperCase() : '?'}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">{req.from.name}</p>
-                      <p className="text-[10px] text-slate-500">{req.from.email}</p>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">{req.from?.name || 'Unknown User'}</p>
+                      <p className="text-[10px] text-slate-500">{req.from?.email || ''}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -195,7 +219,10 @@ export default function Friends() {
                     >
                       <Check size={16} />
                     </button>
-                    <button className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.05] text-slate-400 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all">
+                    <button 
+                      onClick={() => handleReject(req._id)}
+                      className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.05] text-slate-400 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all"
+                    >
                       <X size={16} />
                     </button>
                   </div>

@@ -146,8 +146,9 @@ router.post('/friend-request/:userId', auth, async (req, res) => {
     const currentUser = await User.findById(req.user.id);
 
     if (!targetUser || !currentUser) return res.status(404).json({ message: 'User not found' });
-
-    if (targetUser.friendRequests.some(r => r.from.toString() === req.user.id)) {
+    
+    // Check if there is an active pending request already
+    if (targetUser.friendRequests.some(r => r.from?.toString() === req.user.id && r.status === 'pending')) {
       return res.status(400).json({ message: 'Request already sent' });
     }
 
@@ -155,6 +156,9 @@ router.post('/friend-request/:userId', auth, async (req, res) => {
       return res.status(400).json({ message: 'Already friends' });
     }
 
+    // Clean up any old non-pending requests from this user to avoid duplicates
+    targetUser.friendRequests = targetUser.friendRequests.filter(r => r.from?.toString() !== req.user.id);
+    
     // Update target user's requests
     targetUser.friendRequests.push({ from: req.user.id });
     await targetUser.save();
@@ -177,6 +181,8 @@ router.post('/friend-request/:userId', auth, async (req, res) => {
 router.get('/pending-requests', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate('friendRequests.from', 'name email');
+    
+    if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user.friendRequests.filter(r => r.status === 'pending'));
   } catch (err) {
     res.status(500).send('Server Error');
@@ -214,6 +220,34 @@ router.post('/accept-request/:requestId', auth, async (req, res) => {
   }
 });
 
+// @route   POST /api/users/reject-request/:requestId
+// @desc    Reject a friend request
+// @access  Private
+router.post('/reject-request/:requestId', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const request = user.friendRequests.id(req.params.requestId);
+
+    if (!request || request.status !== 'pending') {
+      return res.status(404).json({ message: 'Request not found' });
+    }
+
+    request.status = 'rejected';
+    
+    // Remove from sender's sentRequests
+    const sender = await User.findById(request.from);
+    if (sender) {
+      sender.sentRequests = (sender.sentRequests || []).filter(id => id.toString() !== req.user.id);
+      await sender.save();
+    }
+
+    await user.save();
+    res.json({ message: 'Friend request rejected', user });
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
+});
+
 // @route   GET /api/users/friends
 // @desc    Get friend list
 // @access  Private
@@ -240,16 +274,80 @@ router.post('/remove-friend/:userId', auth, async (req, res) => {
 
     // Remove from current user
     user.friends = user.friends.filter(id => id.toString() !== friendId);
+    user.friendRequests = user.friendRequests.filter(r => r.from?.toString() !== friendId);
+    user.sentRequests = (user.sentRequests || []).filter(id => id.toString() !== friendId);
     await user.save();
 
     // Remove from target user
     const friend = await User.findById(friendId);
     if (friend) {
       friend.friends = friend.friends.filter(id => id.toString() !== req.user.id);
+      friend.friendRequests = friend.friendRequests.filter(r => r.from?.toString() !== req.user.id);
+      friend.sentRequests = (friend.sentRequests || []).filter(id => id.toString() !== req.user.id);
       await friend.save();
     }
 
     res.json({ message: 'Friend removed successfully', user });
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   POST /api/users/daily-challenge/spin
+// @desc    Record daily challenge spin
+// @access  Private
+router.post('/daily-challenge/spin', auth, async (req, res) => {
+  try {
+    const { topic, date } = req.body;
+    if (!topic) return res.status(400).json({ message: 'Topic is required' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const today = date || new Date().toISOString().substring(0, 10);
+
+    user.dailyChallenge = {
+      date: today,
+      topic: topic,
+      isCompleted: false
+    };
+
+    await user.save();
+    const cleanUser = user.toObject();
+    delete cleanUser.password;
+    res.json({ message: 'Spin recorded', user: cleanUser });
+  } catch (err) {
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   POST /api/users/daily-challenge/complete
+// @desc    Mark daily challenge complete
+// @access  Private
+router.post('/daily-challenge/complete', auth, async (req, res) => {
+  try {
+    const { date } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!user.dailyChallenge) {
+      return res.status(400).json({ message: 'No active challenge' });
+    }
+
+    const today = date || new Date().toISOString().substring(0, 10);
+
+    user.gdPoints = (user.gdPoints || 0) + 1;
+    user.lastCompletedDate = today;
+    
+    // Update History for Graph
+    user.gdPointHistory.push({ date: today, points: user.gdPoints });
+    if (user.gdPointHistory.length > 30) user.gdPointHistory.shift();
+
+    user.dailyChallenge.isCompleted = true;
+    await user.save();
+    const cleanUser = user.toObject();
+    delete cleanUser.password;
+    res.json({ message: 'Challenge completed', user: cleanUser });
   } catch (err) {
     res.status(500).send('Server Error');
   }

@@ -1,24 +1,66 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, ArrowRight, Sparkles, User, Mail, Lock } from 'lucide-react';
+import { UserPlus, ArrowRight, Sparkles, User, Mail, Lock, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
 import { useAuth } from '../store/AuthContext.jsx';
 import toast from 'react-hot-toast';
 import ModernLogoBackground from '../components/ModernLogoBackground.jsx';
 import Logo from '../components/Logo.jsx';
 
+function PasswordStrengthBar({ password }) {
+  const checks = [
+    { label: '8+ characters', ok: password.length >= 8 },
+    { label: 'Contains a letter', ok: /[a-zA-Z]/.test(password) },
+    { label: 'Contains a number', ok: /\d/.test(password) },
+  ];
+  if (!password) return null;
+  return (
+    <div className="mt-2 space-y-1">
+      {checks.map(c => (
+        <div key={c.label} className="flex items-center gap-1.5">
+          {c.ok
+            ? <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
+            : <XCircle size={11} className="text-rose-400 shrink-0" />}
+          <span className={`text-[10px] font-semibold ${c.ok ? 'text-emerald-500' : 'text-slate-400'}`}>{c.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Signup() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const { signup } = useAuth();
   const navigate = useNavigate();
 
+  const validate = () => {
+    const errs = {};
+    if (!name.trim() || name.trim().length < 2)
+      errs.name = 'Name must be at least 2 characters';
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      errs.email = 'Please enter a valid email address';
+    if (!password || password.length < 8)
+      errs.password = 'Password must be at least 8 characters';
+    else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password))
+      errs.password = 'Password must contain at least one letter and one number';
+    return errs;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+    setErrors({});
     setLoading(true);
     
-    const res = await signup(name, email, password);
+    const res = await signup(name.trim(), email.toLowerCase(), password);
     setLoading(false);
     
     if (res.error) {
@@ -37,7 +79,7 @@ export default function Signup() {
 
       <div className="w-full max-w-md relative z-10">
         
-        {/* Placement Ready Badge */}
+        {/* Badge */}
         <div className="flex justify-center mb-6 animate-fade-in">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-600 dark:text-brand-400 text-xs font-bold uppercase tracking-widest">
             <Sparkles size={12} />
@@ -58,51 +100,62 @@ export default function Signup() {
           
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-500 to-transparent opacity-50" />
           
-          <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+          <form onSubmit={handleSubmit} className="space-y-5 relative z-10" noValidate>
             
-            <div className="space-y-2">
+            {/* Name */}
+            <div className="space-y-1.5">
               <label className="label ml-1">Full Name</label>
               <div className="relative">
                 <input
                   type="text"
-                  required
-                  className="input-field pl-10 h-11"
+                  className={`input-field pl-10 h-11 ${errors.name ? 'border-rose-400 dark:border-rose-500/60' : ''}`}
                   placeholder="Future Engineer"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => { setName(e.target.value); if (errors.name) setErrors(p => ({...p, name: ''})); }}
                 />
                 <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
+              {errors.name && <p className="text-[11px] text-rose-500 font-semibold ml-1">{errors.name}</p>}
             </div>
 
-            <div className="space-y-2">
+            {/* Email */}
+            <div className="space-y-1.5">
               <label className="label ml-1">Email Address</label>
               <div className="relative">
                 <input
                   type="email"
-                  required
-                  className="input-field pl-10 h-11"
+                  className={`input-field pl-10 h-11 ${errors.email ? 'border-rose-400 dark:border-rose-500/60' : ''}`}
                   placeholder="name@dreamcompany.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors(p => ({...p, email: ''})); }}
                 />
                 <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
+              {errors.email && <p className="text-[11px] text-rose-500 font-semibold ml-1">{errors.email}</p>}
             </div>
 
-            <div className="space-y-2">
+            {/* Password */}
+            <div className="space-y-1.5">
               <label className="label ml-1">Password</label>
               <div className="relative">
                 <input
-                  type="password"
-                  required
-                  className="input-field pl-10 h-11"
-                  placeholder="••••••••"
+                  type={showPassword ? 'text' : 'password'}
+                  className={`input-field pl-10 pr-10 h-11 ${errors.password ? 'border-rose-400 dark:border-rose-500/60' : ''}`}
+                  placeholder="Min. 8 chars with a number"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors(p => ({...p, password: ''})); }}
                 />
                 <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
+              {errors.password && <p className="text-[11px] text-rose-500 font-semibold ml-1">{errors.password}</p>}
+              <PasswordStrengthBar password={password} />
             </div>
 
             <button

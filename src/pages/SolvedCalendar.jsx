@@ -16,10 +16,23 @@ export default function SolvedCalendar() {
 
   const byDate = useMemo(() => {
     const map = {};
-    problems.filter(p => p.dateSolved || p.solvedDate).forEach(p => {
-      const d = (p.dateSolved || p.solvedDate).substring(0, 10);
-      if (!map[d]) map[d] = [];
-      map[d].push(p);
+    problems.forEach(p => {
+      // 1. Solved Date
+      const sd = (p.dateSolved || p.solvedDate)?.substring(0, 10);
+      if (sd) {
+        if (!map[sd]) map[sd] = [];
+        map[sd].push({ ...p, _calType: 'solved' });
+      }
+
+      // 2. Revision Date
+      const rd = p.revisionDate?.substring(0, 10);
+      if (rd && p.status === 'Needs Revision') {
+        if (!map[rd]) map[rd] = [];
+        // Only push if it's not already there as a revision
+        if (!map[rd].some(existing => existing.id === p.id && existing._calType === 'revision')) {
+           map[rd].push({ ...p, _calType: 'revision' });
+        }
+      }
     });
     return map;
   }, [problems]);
@@ -142,7 +155,14 @@ export default function SolvedCalendar() {
                 {selectedProblems.map(p => (
                   <div key={p.id} className={`p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05] space-y-2.5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-brand-500/5 hover:border-brand-500/20 group relative overflow-hidden border-l-4 ${p.platform?.toLowerCase() === 'leetcode' ? 'border-l-blue-500' : 'border-l-amber-500'}`}>
                     <div className="flex justify-between items-start gap-3">
-                      <p className="text-sm font-black text-slate-800 dark:text-white line-clamp-2 leading-tight group-hover:text-brand-500 transition-colors">{p.name}</p>
+                      <div>
+                        <p className="text-sm font-black text-slate-800 dark:text-white line-clamp-2 leading-tight group-hover:text-brand-500 transition-colors flex items-center gap-2">
+                          {p.name}
+                          {p._calType === 'revision' && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500 uppercase tracking-widest border border-rose-500/20 shadow-sm shrink-0 whitespace-nowrap">Revision Pending</span>
+                          )}
+                        </p>
+                      </div>
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${p.platform?.toLowerCase() === 'leetcode' ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'}`}>
                         {p.platform}
                       </span>

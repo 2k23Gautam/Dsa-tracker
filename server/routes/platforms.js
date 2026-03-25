@@ -106,6 +106,42 @@ async function fetchCodeforcesContests() {
   }
 }
 
+// ── Helper: fetch upcoming CodeChef contests ──────────────────────────────
+async function fetchCodeChefContests() {
+  try {
+    const { data } = await axios.get('https://www.codechef.com/api/list/contests/all?sort_by=START&sorting_order=asc&offset=0&mode=all', {
+      timeout: 8000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json'
+      }
+    });
+
+    const upcoming = [
+      ...(data?.future_contests || []),
+      ...(data?.present_contests || []),
+    ];
+
+    console.log(`[CodeChef] returned ${upcoming.length} contests`);
+    return upcoming.map(c => {
+      const startTime = new Date(c.contest_start_date_iso || c.contest_start_date).getTime();
+      const endTime   = new Date(c.contest_end_date_iso   || c.contest_end_date).getTime();
+      return {
+        id: `codechef|${c.contest_code}`,
+        platform: 'CodeChef',
+        name: c.contest_name,
+        startTime,
+        endTime,
+        duration: Math.round((endTime - startTime) / 1000),
+        link: `https://www.codechef.com/${c.contest_code}`
+      };
+    }).filter(c => !isNaN(c.startTime));
+  } catch (e) {
+    console.error('[CodeChef] fetch failed:', e.message);
+    return [];
+  }
+}
+
 // @route   GET /api/platforms/contests
 router.get('/contests', auth, async (req, res) => {
   try {
@@ -117,16 +153,17 @@ router.get('/contests', auth, async (req, res) => {
     // Show contests starting within the next 48 hours
     const windowEndTime = nowTime + (48 * 60 * 60 * 1000);
 
-    // Fetch from LeetCode and Codeforces in parallel
-    const [leetcode, codeforces] = await Promise.all([
+    // Fetch from LeetCode, Codeforces, and CodeChef in parallel
+    const [leetcode, codeforces, codechef] = await Promise.all([
       fetchLeetCodeContests(),
-      fetchCodeforcesContests()
+      fetchCodeforcesContests(),
+      fetchCodeChefContests()
     ]);
 
     // Merge and deduplicate by platform+name
     const seen = new Set();
     const merged = [];
-    for (const c of [...leetcode, ...codeforces]) {
+    for (const c of [...leetcode, ...codeforces, ...codechef]) {
       const dedupKey = `${c.platform}|${c.name}`;
       if (!seen.has(dedupKey)) {
         seen.add(dedupKey);
@@ -140,7 +177,7 @@ router.get('/contests', auth, async (req, res) => {
       return isUpcoming && !isDismissed;
     });
 
-    console.log(`Returning ${filtered.length} contests (LC=${leetcode.length}, CF=${codeforces.length})`);
+    console.log(`Returning ${filtered.length} contests (LC=${leetcode.length}, CF=${codeforces.length}, CC=${codechef.length})`);
     return res.json(filtered.sort((a, b) => a.startTime - b.startTime));
   } catch (err) {
     console.error('Contest route error:', err);

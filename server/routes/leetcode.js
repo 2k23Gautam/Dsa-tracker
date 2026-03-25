@@ -110,8 +110,9 @@ router.post('/sync', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    user.leetcodeUsername = leetcodeUsername || user.leetcodeUsername;
-    user.leetcodeStats = stats || user.leetcodeStats;
+    // Only update if the fields are explicitly provided (don't use || so empty string can clear)
+    if (leetcodeUsername !== undefined) user.leetcodeUsername = leetcodeUsername;
+    if (stats !== undefined) user.leetcodeStats = stats;
     await user.save();
 
     res.json({ message: 'LeetCode stats synced successfully', user });

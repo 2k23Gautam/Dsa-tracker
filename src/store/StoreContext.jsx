@@ -317,7 +317,7 @@ export function StoreProvider({ children }) {
 
   useEffect(() => {
     if (token) {
-      checkGlobalSubmissions();
+      checkGlobalSubmissions(true);
       syncAllPlatformStats();
     }
     
@@ -328,7 +328,7 @@ export function StoreProvider({ children }) {
       }
     }, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [token]); // Only depend on token
+  }, [token, authUser?.leetcodeUsername, authUser?.codeforcesHandle]);
 
   const dismissSubmission = (titleSlug) => {
     setDismissedSlugs(prev => [...prev, titleSlug]);

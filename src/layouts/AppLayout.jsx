@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Sidebar.jsx';
 import TopBar from '../components/TopBar.jsx';
+import DailyWheelModal from '../components/DailyWheelModal.jsx';
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-slate-50 dark:bg-[#020617] relative selection:bg-brand-500/20">
+      <DailyWheelModal />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       {/* Mobile Overlay */}

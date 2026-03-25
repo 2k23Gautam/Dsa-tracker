@@ -161,7 +161,7 @@ export default function Profile() {
                     type="text"
                     value={lcHandle}
                     onChange={(e) => setLcHandle(e.target.value)}
-                    placeholder="e.g. gautam_2k23"
+                    placeholder="e.g. leetcode_user"
                     className="flex-1 bg-transparent border-none outline-none text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300"
                   />
                 </div>

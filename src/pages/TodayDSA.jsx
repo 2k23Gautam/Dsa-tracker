@@ -106,11 +106,16 @@ function Section({ title, icon, count, empty, items, onEdit, accentColor, glowCo
                 <StatusBadge status={p.status} />
                 <PlatformBadge platform={p.platform} />
               </div>
-              <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-600">
-                <span>{p.person || '—'}</span>
-                {p.timeTaken ? <span>⏱ {p.timeTaken}m</span> : null}
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200 dark:border-white/5">
+                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  {p.dateSolved ? p.dateSolved.substring(0, 10) : 'No Date'}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {p.timeTaken && <span className="text-[10px] text-slate-400 dark:text-slate-500 mr-1 font-mono">⏱ {p.timeTaken}m</span>}
+                  {p.approach && <span className="p-1 px-1.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-bold" title="Has Approach">💡</span>}
+                  {p.solutionCode && <span className="p-1 px-1.5 rounded bg-blue-500/10 text-blue-500 text-[10px] font-bold" title="Has Code">{'</>'}</span>}
+                </div>
               </div>
-              {p.approach && <p className="text-[11px] text-slate-400 dark:text-slate-600 italic line-clamp-2">{p.approach}</p>}
             </button>
           ))}
         </div>

@@ -8,7 +8,8 @@ export default function CircularProgress({
   strokeWidth = 8, 
   color = '#3b82f6', 
   label,
-  icon
+  icon,
+  noCard = false
 }) {
   const [displayValue, setDisplayValue] = useState(0);
   const radius = (size - strokeWidth) / 2;
@@ -28,7 +29,7 @@ export default function CircularProgress({
   }, [value]);
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-3 p-4 glass-card group transition-all duration-300 hover:scale-105">
+    <div className={`flex flex-col items-center justify-center space-y-2 group transition-all duration-300 ${noCard ? 'p-0' : 'p-4 glass-card hover:scale-105'}`}>
       <div className="relative" style={{ width: size, height: size }}>
         {/* Background Circle */}
         <svg className="transform -rotate-90 w-full h-full">
@@ -65,7 +66,8 @@ export default function CircularProgress({
           <motion.div 
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-2xl font-black font-outfit text-slate-900 dark:text-white leading-none"
+            className="font-black font-outfit text-slate-900 dark:text-white leading-none"
+            style={{ fontSize: `${Math.round(size * 0.32)}px` }}
           >
             {displayValue}
           </motion.div>

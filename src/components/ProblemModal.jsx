@@ -31,7 +31,7 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
       else if (initialData) setFormData({ ...initialState, ...initialData, dateSolved: new Date().toISOString().substring(0, 10) });
       else setFormData({ ...initialState, dateSolved: new Date().toISOString().substring(0, 10) });
     }
-  }, [open, editProblem, initialData, authUser]);
+  }, [open, editProblem]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

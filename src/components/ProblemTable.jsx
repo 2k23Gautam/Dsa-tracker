@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { ArrowUpDown, Maximize2, Edit2, CheckCircle2, Star, Lightbulb, X } from 'lucide-react';
+import { ArrowUpDown, Maximize2, Edit2, CheckCircle2, Star, Lightbulb, X, Code2 } from 'lucide-react';
 import { useStore } from '../store/StoreContext.jsx';
 import { DifficultyBadge, PlatformBadge, TopicBadge, PatternBadge } from './Badges.jsx';
+import CodeSolutionModal from './CodeSolutionModal.jsx';
+import ProblemViewerModal from './ProblemViewerModal.jsx';
 
 export default function ProblemTable({ problems, onEdit }) {
   const { filters, setFilter, togglePOTD } = useStore();
   const [approachModal, setApproachModal] = useState({ open: false, problem: null });
+  const [codeModal, setCodeModal] = useState({ open: false, problem: null });
 
   const handleSort = (key) => {
     if (filters.sortBy === key) {
@@ -37,7 +40,7 @@ export default function ProblemTable({ problems, onEdit }) {
             <th className="table-th hidden lg:table-cell" onClick={() => handleSort('timeComplexity')}>Time (Min) <SortIcon sortKey="timeComplexity"/></th>
             <th className="table-th hidden sm:table-cell" onClick={() => handleSort('revisionCount')}>Rev# <SortIcon sortKey="revisionCount"/></th>
             <th className="table-th text-center">POTD</th>
-            <th className="table-th w-20 text-right">Actions</th>
+            <th className="table-th w-24 text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -56,13 +59,24 @@ export default function ProblemTable({ problems, onEdit }) {
                   ) : (
                     <span className="truncate">{p.name}</span>
                   )}
+                  {/* Approach button */}
                   {p.approach && (
-                    <button 
+                    <button
                       onClick={(e) => { e.stopPropagation(); setApproachModal({ open: true, problem: p }); }}
                       className="p-1 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded transition-colors shrink-0"
                       title="View Approach & Intuition"
                     >
                       <Lightbulb size={14} />
+                    </button>
+                  )}
+                  {/* Code Solution button */}
+                  {p.solutionCode && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setCodeModal({ open: true, problem: p }); }}
+                      className="p-1 text-slate-400 hover:text-[#569cd6] hover:bg-[#569cd6]/10 rounded transition-colors shrink-0"
+                      title="View Code Solution"
+                    >
+                      <Code2 size={14} />
                     </button>
                   )}
                 </div>
@@ -87,7 +101,7 @@ export default function ProblemTable({ problems, onEdit }) {
               <td className="table-td hidden lg:table-cell text-xs text-slate-500 font-mono">{p.timeComplexity || '—'}</td>
               <td className="table-td hidden sm:table-cell text-center font-bold text-slate-700 dark:text-slate-200">{p.revisionCount}</td>
               <td className="table-td text-center">
-                <button 
+                <button
                   onClick={() => togglePOTD(p.id)}
                   className={`p-1.5 rounded-lg transition-colors ${p.isPOTD ? 'text-amber-500 bg-amber-50 dark:bg-amber-500/10' : 'text-slate-300 dark:text-slate-600 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`}
                   title={p.isPOTD ? "Remove from POTD" : "Mark as POTD"}
@@ -110,6 +124,7 @@ export default function ProblemTable({ problems, onEdit }) {
         {problems.length} problem{problems.length !== 1 ? 's' : ''} shown
       </div>
 
+      {/* Approach Modal */}
       {approachModal.open && (
         <div className="modal-overlay z-[100]" onClick={() => setApproachModal({ open: false, problem: null })}>
           <div className="modal-box flex flex-col max-w-lg w-full" onClick={e => e.stopPropagation()}>
@@ -134,6 +149,14 @@ export default function ProblemTable({ problems, onEdit }) {
           </div>
         </div>
       )}
+
+      {/* Comprehensive Problem Viewer Modal */}
+      <ProblemViewerModal
+        open={codeModal.open}
+        onClose={() => setCodeModal({ open: false, problem: null })}
+        problem={codeModal.problem}
+        onEdit={onEdit}
+      />
     </div>
   );
 }

@@ -9,18 +9,27 @@ import ProblemModal from '../components/ProblemModal.jsx';
 import CircularProgress from '../components/CircularProgress.jsx';
 import CodeforcesTabContent from '../components/CodeforcesTabContent.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import BadgeDisplay from '../components/BadgeDisplay.jsx';
+import DailyWheelModal from '../components/DailyWheelModal.jsx';
+import MilestoneModal from '../components/MilestoneModal.jsx';
+import ProblemViewerModal from '../components/ProblemViewerModal.jsx';
+import { Sparkles } from 'lucide-react';
 
 import { BAR_COLORS } from '../store/data.js';
 
 export default function Dashboard() {
-  const { stats, problems, detectedSubmissions, dismissSubmission, lastSyncTime } = useStore();
+  const { stats, problems, detectedSubmissions, dismissSubmission, lastSyncTime, todayStr } = useStore();
   const { authUser } = useAuth();
   const [timeRange, setTimeRange] = useState('14 Days');
   const [modalOpen, setModalOpen] = useState(false);
+  const [editProblem, setEditProblem] = useState(null);
+  const [revisionViewerOpen, setRevisionViewerOpen] = useState(false);
   const [showAllTopics, setShowAllTopics] = useState(false);
   const [initialModalData, setInitialModalData] = useState(null);
   const [contests, setContests] = useState([]);
   const [contestError, setContestError] = useState(false);
+  const [dailyModalOpen, setDailyModalOpen] = useState(false);
+  const [milestoneModalOpen, setMilestoneModalOpen] = useState(false);
   const { token } = useAuth();
 
   const fetchContests = async () => {
@@ -69,6 +78,11 @@ export default function Dashboard() {
     if (authUser?.codeforcesHandle) list.push({ name: 'Codeforces', handle: authUser.codeforcesHandle });
     return list;
   }, [authUser]);
+
+  const urgentRevision = useMemo(() => {
+    if (!todayStr) return [];
+    return problems.filter(p => p.status === 'Needs Revision' && p.revisionDate && p.revisionDate <= todayStr);
+  }, [problems, todayStr]);
 
   const activityData = useMemo(() => {
     const data = [];
@@ -227,6 +241,80 @@ export default function Dashboard() {
           </button>
         </div>
       )}
+
+      {/* Daily Challenge Premium Section */}
+      <div className="glass-card p-6 mb-8 border border-brand-500/20 backdrop-blur-xl relative overflow-hidden group">
+         {/* Background Accents */}
+         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/5 rounded-full blur-[100px] -z-10 group-hover:bg-brand-500/10 transition-colors" />
+         <div className="absolute bottom-[-50px] left-[-50px] w-48 h-48 bg-emerald-500/5 rounded-full blur-[80px] -z-10" />
+
+         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            {/* Left: Badge & Points */}
+            <div className="flex items-center gap-6">
+              <BadgeDisplay 
+                points={authUser?.gdPoints || 0} 
+                size="lg" 
+                onClick={() => setMilestoneModalOpen(true)}
+              />
+              
+              <div className="hidden md:block h-12 w-[1px] bg-white/10" />
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Next Milestone</p>
+                  {(() => {
+                    const points = authUser?.gdPoints || 0;
+                    const TIERS = [
+                      { min: 5000, label: 'Legendary' },
+                      { min: 2000, label: 'Diamond' },
+                      { min: 1000, label: 'Platinum' },
+                      { min: 500,  label: 'Gold' },
+                      { min: 100,  label: 'Silver' },
+                      { min: 50,   label: 'Bronze' },
+                      { min: 0,    label: 'Novice' }
+                    ];
+                    const nextTier = [...TIERS].reverse().find(t => t.min > points) || TIERS[0];
+                    const currentTier = TIERS.find(t => points >= t.min) || TIERS[TIERS.length - 1];
+                    const progress = nextTier.min > currentTier.min 
+                      ? ((points - currentTier.min) / (nextTier.min - currentTier.min)) * 100 
+                      : 100;
+
+                    return (
+                      <div className="flex items-center gap-3">
+                        <div className="w-32 h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            className="h-full bg-gradient-to-r from-brand-500 to-emerald-500" 
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {Math.round(nextTier.min - points)} to {nextTier.label}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Action */}
+            <div className="flex flex-col items-center md:items-end gap-3">
+              <div className="text-center md:text-right">
+                <h4 className="text-white font-black text-sm font-outfit tracking-tight">Daily assignment ready</h4>
+                <p className="text-brand-500/80 text-[10px] font-bold uppercase tracking-[0.1em] mt-0.5">Earn Points for every solve</p>
+              </div>
+
+              <button 
+                onClick={() => setDailyModalOpen(true)}
+                className="relative overflow-hidden px-8 py-3 rounded-2xl bg-brand-500 text-white text-[11px] font-black uppercase tracking-[0.2em] hover:bg-brand-600 shadow-xl shadow-brand-500/20 transition-all flex items-center gap-2 group/btn"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:animate-shimmer" />
+                Solve Now <Sparkles size={14} className="group-hover/btn:rotate-12 transition-transform" />
+              </button>
+            </div>
+         </div>
+      </div>
 
       {/* Grid: Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -401,6 +489,35 @@ export default function Dashboard() {
         
         {/* Activity Chart */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Urgent Revision Banner */}
+          {urgentRevision.length > 0 && (
+            <div className="gradient-glass p-4 border-l-4 border-rose-500 animate-in slide-in-from-top-4 duration-500">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-rose-500/10 text-rose-500`}>
+                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+                      Time for Revision!
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">
+                      You have <span className="font-bold text-rose-500">{urgentRevision.length}</span> {urgentRevision.length === 1 ? 'problem' : 'problems'} scheduled for revision. E.g. <span className="font-bold text-rose-500">"{urgentRevision[0].name}"</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setRevisionViewerOpen(true)}
+                    className="px-4 py-1.5 rounded-lg bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-500/20 hover:bg-rose-600 transition-all whitespace-nowrap"
+                  >
+                    View Revision
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* New Submission Banner */}
           {detectedSubmissions.length > 0 && (
             <div className="gradient-glass p-4 border-l-4 border-brand-500 animate-in slide-in-from-top-4 duration-500">
@@ -611,8 +728,33 @@ export default function Dashboard() {
 
       <ProblemModal 
         open={modalOpen} 
-        onClose={() => setModalOpen(false)} 
+        onClose={() => { setModalOpen(false); setEditProblem(null); setInitialModalData(null); }} 
         initialData={initialModalData} 
+        editProblem={editProblem}
+      />
+      
+      {urgentRevision.length > 0 && (
+        <ProblemViewerModal 
+          open={revisionViewerOpen} 
+          onClose={() => setRevisionViewerOpen(false)} 
+          problem={urgentRevision[0]} 
+          onEdit={(p) => {
+             setRevisionViewerOpen(false);
+             setEditProblem(p);
+             setModalOpen(true);
+          }}
+        />
+      )}
+
+      <DailyWheelModal 
+        open={dailyModalOpen} 
+        onClose={() => setDailyModalOpen(false)} 
+      />
+      <MilestoneModal
+        open={milestoneModalOpen}
+        onClose={() => setMilestoneModalOpen(false)}
+        points={authUser?.gdPoints || 0}
+        history={authUser?.gdPointHistory || []}
       />
     </div>
   );

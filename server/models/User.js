@@ -21,6 +21,17 @@ const userSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
     createdAt: { type: Date, default: Date.now }
   }],
+  dailyChallenge: {
+    date: { type: String, default: "" },
+    topic: { type: String, default: "" },
+    isCompleted: { type: Boolean, default: false }
+  },
+  gdPoints: { type: Number, default: 0 },
+  lastCompletedDate: { type: String, default: "" },
+  gdPointHistory: [{
+    date: { type: String },
+    points: { type: Number }
+  }],
   dismissedContests: [{ type: String }],
   createdAt: { type: Date, default: Date.now }
 });
