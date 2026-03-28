@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Save, Trash2, Sparkles, Loader2 } from 'lucide-react';
+import { X, Save, Trash2, Sparkles, Loader2, ChevronDown, ChevronRight, GitBranch } from 'lucide-react';
 import { useStore } from '../store/StoreContext.jsx';
 import { useAuth } from '../store/AuthContext.jsx';
 import { PLATFORMS, DIFFICULTIES, STATUSES, TOPICS, PATTERNS, TIME_COMPLEXITIES, SPACE_COMPLEXITIES } from '../store/data.js';
 import TagInput from './TagInput.jsx';
+import Mermaid from './Mermaid.jsx';
 import toast from 'react-hot-toast';
 
 export default function ProblemModal({ open, onClose, editProblem = null, initialData = null }) {
@@ -11,6 +12,7 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
   const { token } = useAuth();
   const [formData, setFormData] = useState({ ...initialState });
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showVis, setShowVis] = useState(true);
 
   // Dynamically extract custom topics & patterns from user's problems
   const dynamicTopics = useMemo(() => {
@@ -82,8 +84,13 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
         timeComplexity: suggestions.timeComplexity || prev.timeComplexity,
         spaceComplexity: suggestions.spaceComplexity || prev.spaceComplexity,
         approach: suggestions.suggestedApproach || prev.approach,
+        visualization: suggestions.visualization || prev.visualization,
         notes: prev.notes
       }));
+
+      if (suggestions.visualization) {
+        setShowVis(true);
+      }
 
       toast.success('Fields populated with AI suggestions!');
     } catch (err) {
@@ -201,37 +208,48 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
               </div>
             </div>
 
-            {/* Classification */}
+            {/* Revision Section (Approach & Complexity) */}
             <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-white/[0.06]">
-              <h3 className="section-title text-sm border-l-2 border-brand-500 pl-2">Classification</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="section-title text-sm border-l-2 border-brand-500 pl-2 mb-0">Approach & Logic</h3>
+                {formData.visualization && (
+                  <button 
+                    type="button"
+                    onClick={() => setShowVis(!showVis)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all text-[10px] font-bold uppercase tracking-wider border ${
+                      showVis 
+                      ? 'bg-brand-500/10 text-brand-600 border-brand-500/20' 
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-400 border-transparent hover:border-slate-300 dark:hover:border-white/10'
+                    }`}
+                  >
+                    <GitBranch size={12} className={showVis ? 'animate-pulse' : ''} />
+                    {showVis ? 'Hide Visual' : 'Show Visual'}
+                  </button>
+                )}
+              </div>
               
-              <div>
-                <label className="label mb-2">Topics</label>
-                <TagInput 
-                  options={dynamicTopics} 
-                  selected={formData.topics} 
-                  onChange={v => setFormData(prev => ({ ...prev, topics: v }))} 
-                  placeholder="Search and select topics..." 
+              <div className="relative">
+                <textarea 
+                  rows="4" 
+                  className="input-field resize-none py-3 bg-brand-500/[0.01] dark:bg-brand-500/[0.02] border-brand-500/10 focus:border-brand-500/30" 
+                  placeholder="Explain the intuition and logical steps to solve..."
+                  value={formData.approach} 
+                  onChange={e => setFormData({...formData, approach: e.target.value})} 
                 />
+                {!formData.approach && !isAiLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                    <span className="text-xs italic">Use "Fill with AI" to generate a revision-ready approach</span>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="label mb-2">Patterns</label>
-                <TagInput 
-                  options={dynamicPatterns} 
-                  selected={formData.patterns} 
-                  onChange={v => setFormData(prev => ({ ...prev, patterns: v }))} 
-                  placeholder="Search and select patterns..." 
-                />
-              </div>
-            </div>
+              {formData.visualization && showVis && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                  <Mermaid chart={formData.visualization} />
+                </div>
+              )}
 
-
-            {/* Tracking */}
-            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-white/[0.06]">
-              <h3 className="section-title text-sm border-l-2 border-brand-500 pl-2">Tracking & Meta</h3>
-              
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="relative">
                   <label className="label">Time Complexity</label>
                   <input 
@@ -258,9 +276,42 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
                     {SPACE_COMPLEXITIES.map(sc => <option key={sc} value={sc} />)}
                   </datalist>
                 </div>
+              </div>
+            </div>
+
+            {/* Classification */}
+            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-white/[0.06]">
+              <h3 className="section-title text-sm border-l-2 border-brand-500 pl-2">Classification</h3>
+              
+              <div>
+                <label className="label mb-2">Patterns (e.g., Slidng Window)</label>
+                <TagInput 
+                  options={dynamicPatterns} 
+                  selected={formData.patterns} 
+                  onChange={v => setFormData(prev => ({ ...prev, patterns: v }))} 
+                  placeholder="Search and select patterns..." 
+                />
+              </div>
+
+              <div>
+                <label className="label mb-2">Topics (e.g., Array, BFS)</label>
+                <TagInput 
+                  options={dynamicTopics} 
+                  selected={formData.topics} 
+                  onChange={v => setFormData(prev => ({ ...prev, topics: v }))} 
+                  placeholder="Search and select topics..." 
+                />
+              </div>
+            </div>
+
+            {/* Tracking & Notes */}
+            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-white/[0.06]">
+              <h3 className="section-title text-sm border-l-2 border-brand-500 pl-2">Log Details</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">Date Solved *</label>
-                  <input required type="date" className="input-field flex-1"
+                  <input required type="date" className="input-field"
                     value={formData.dateSolved} onChange={e => setFormData({...formData, dateSolved: e.target.value})} />
                 </div>
                 <div>
@@ -271,14 +322,8 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
               </div>
 
               <div>
-                <label className="label">Approach (Intuition & Logic)</label>
-                <textarea rows="4" className="input-field resize-none py-3" placeholder="Explain the intuition and logical steps to solve..."
-                  value={formData.approach} onChange={e => setFormData({...formData, approach: e.target.value})} />
-              </div>
-
-              <div>
                 <label className="label">Notes / Learnings</label>
-                <textarea rows="3" className="input-field resize-none py-3" placeholder="What did you learn from this problem? Edge cases?"
+                <textarea rows="3" className="input-field resize-none py-3" placeholder="What did you learn? Edge cases?"
                   value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
               </div>
 
@@ -324,5 +369,6 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
 const initialState = {
   name: '', link: '', platform: '', difficulty: '', topics: [], patterns: [],
   status: 'Solved', dateSolved: '', timeComplexity: '', spaceComplexity: '',
-  approach: '', notes: '', solutionCode: '', revisionCount: 0, isPOTD: false
+  approach: '', notes: '', solutionCode: '', revisionCount: 0, isPOTD: false,
+  visualization: ''
 };
