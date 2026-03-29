@@ -4,7 +4,6 @@ import { useStore } from '../store/StoreContext.jsx';
 import { useAuth } from '../store/AuthContext.jsx';
 import { PLATFORMS, DIFFICULTIES, STATUSES, TOPICS, PATTERNS, TIME_COMPLEXITIES, SPACE_COMPLEXITIES } from '../store/data.js';
 import TagInput from './TagInput.jsx';
-import Mermaid from './Mermaid.jsx';
 import toast from 'react-hot-toast';
 
 export default function ProblemModal({ open, onClose, editProblem = null, initialData = null }) {
@@ -12,7 +11,7 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
   const { token } = useAuth();
   const [formData, setFormData] = useState({ ...initialState });
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [showVis, setShowVis] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dynamically extract custom topics & patterns from user's problems
   const dynamicTopics = useMemo(() => {
@@ -35,11 +34,23 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
     }
   }, [open, editProblem]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editProblem) updateProblem(formData.id, formData);
-    else addProblem(formData);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      let success;
+      if (editProblem) {
+        success = await updateProblem(formData.id || formData._id, formData);
+      } else {
+        success = await addProblem(formData);
+      }
+      
+      if (success) {
+        onClose();
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = () => {
@@ -83,14 +94,10 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
         patterns: Array.from(new Set([...(prev.patterns || []), ...(suggestions.patterns || [])])),
         timeComplexity: suggestions.timeComplexity || prev.timeComplexity,
         spaceComplexity: suggestions.spaceComplexity || prev.spaceComplexity,
+        spaceComplexity: suggestions.spaceComplexity || prev.spaceComplexity,
         approach: suggestions.suggestedApproach || prev.approach,
-        visualization: suggestions.visualization || prev.visualization,
         notes: prev.notes
       }));
-
-      if (suggestions.visualization) {
-        setShowVis(true);
-      }
 
       toast.success('Fields populated with AI suggestions!');
     } catch (err) {
@@ -212,20 +219,6 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
             <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-white/[0.06]">
               <div className="flex items-center justify-between">
                 <h3 className="section-title text-sm border-l-2 border-brand-500 pl-2 mb-0">Approach & Logic</h3>
-                {formData.visualization && (
-                  <button 
-                    type="button"
-                    onClick={() => setShowVis(!showVis)}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all text-[10px] font-bold uppercase tracking-wider border ${
-                      showVis 
-                      ? 'bg-brand-500/10 text-brand-600 border-brand-500/20' 
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-400 border-transparent hover:border-slate-300 dark:hover:border-white/10'
-                    }`}
-                  >
-                    <GitBranch size={12} className={showVis ? 'animate-pulse' : ''} />
-                    {showVis ? 'Hide Visual' : 'Show Visual'}
-                  </button>
-                )}
               </div>
               
               <div className="relative">
@@ -242,12 +235,6 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
                   </div>
                 )}
               </div>
-
-              {formData.visualization && showVis && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <Mermaid chart={formData.visualization} />
-                </div>
-              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative">
@@ -354,9 +341,14 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
           </div>
           
           <div className="flex items-center gap-3">
-            <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
-            <button type="submit" form="problem-form" className="btn-primary">
-              <Save size={16} /> {editProblem ? 'Save Changes' : 'Log Problem'}
+            <button type="button" onClick={onClose} className="btn-secondary" disabled={isSubmitting}>Cancel</button>
+            <button type="submit" form="problem-form" className="btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Save size={16} />
+              )}
+              {isSubmitting ? 'Processing...' : (editProblem ? 'Save Changes' : 'Log Problem')}
             </button>
           </div>
         </div>
@@ -367,8 +359,7 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
 }
 
 const initialState = {
-  name: '', link: '', platform: '', difficulty: '', topics: [], patterns: [],
+  name: '', link: '', platform: '', difficulty: 'Easy', topics: [], patterns: [],
   status: 'Solved', dateSolved: '', timeComplexity: '', spaceComplexity: '',
-  approach: '', notes: '', solutionCode: '', revisionCount: 0, isPOTD: false,
-  visualization: ''
+  approach: '', notes: '', solutionCode: '', revisionCount: 0, isPOTD: false
 };

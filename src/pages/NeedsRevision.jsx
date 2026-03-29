@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RotateCcw, CalendarPlus, AlertTriangle, Pencil } from 'lucide-react';
+import { RotateCcw, CalendarPlus, AlertTriangle, Pencil, Lightbulb, Code2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useStore } from '../store/StoreContext.jsx';
 import { applyFilters, EMPTY_FILTERS } from '../components/FilterBar.jsx';
@@ -83,16 +83,25 @@ export default function NeedsRevision() {
                 </div>
 
                 {p.revisionDate && (
-                  <p className="text-xs text-slate-400 dark:text-slate-600">
+                  <p className="text-xs text-slate-400 dark:text-slate-600 mb-2">
                     📅 Next revision: <span className="text-amber-400 font-medium">{p.revisionDate}</span>
                   </p>
                 )}
 
-                {p.approach && (
-                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 italic">
-                    {p.approach}
-                  </p>
-                )}
+                <div className="flex items-center gap-2 mb-2">
+                  {p.approach && (
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md">
+                      <Lightbulb size={12} /> Approach Logged
+                    </div>
+                  )}
+                  {p.solutionCode && (
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#569cd6] bg-[#569cd6]/10 px-2 py-1 rounded-md">
+                      <Code2 size={12} /> Code Saved
+                    </div>
+                  )}
+                </div>
+
+
 
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => markRevised(p)}

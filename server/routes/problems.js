@@ -32,19 +32,39 @@ router.get('/', auth, async (req, res) => {
     });
     res.json(formatted);
   } catch (err) {
+    console.error('Problem API Error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
+// Sanitize body: coerce any string-typed fields that accidentally came as arrays
+function sanitizeBody(body) {
+  const STRING_FIELDS = ['name', 'link', 'platform', 'difficulty', 'status', 'approach',
+    'notes', 'solutionCode', 'timeComplexity', 'spaceComplexity',
+    'dateSolved', 'revisionDate'];
+  const cleaned = { ...body };
+  for (const field of STRING_FIELDS) {
+    if (Array.isArray(cleaned[field])) {
+      cleaned[field] = cleaned[field].join('\n');
+    }
+  }
+  return cleaned;
+}
+
 // Add a new problem
 router.post('/', auth, async (req, res) => {
   try {
-    const problem = new Problem({ ...req.body, user: req.user.id });
+    const body = sanitizeBody(req.body);
+    const problem = new Problem({ ...body, user: req.user.id });
     await problem.save();
     const obj = problem.toObject();
     obj.id = obj._id.toString();
     res.json(obj);
   } catch (err) {
+    console.error('Add Problem Error:', err.name, err.message);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      return res.status(400).json({ message: err.message });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -52,16 +72,21 @@ router.post('/', auth, async (req, res) => {
 // Update a problem
 router.put('/:id', auth, async (req, res) => {
   try {
+    const body = sanitizeBody(req.body);
     const problem = await Problem.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id },
-      { $set: req.body },
-      { new: true }
+      { $set: body },
+      { new: true, runValidators: true }
     );
     if (!problem) return res.status(404).json({ message: 'Problem not found' });
     const obj = problem.toObject();
     obj.id = obj._id.toString();
     res.json(obj);
   } catch (err) {
+    console.error('Update Problem Error:', err.name, err.message);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      return res.status(400).json({ message: err.message });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -73,6 +98,7 @@ router.delete('/:id', auth, async (req, res) => {
     if (!problem) return res.status(404).json({ message: 'Problem not found' });
     res.json({ message: 'Problem deleted', id: req.params.id });
   } catch (err) {
+    console.error('Problem API Error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

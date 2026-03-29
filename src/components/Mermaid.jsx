@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
+import toast from 'react-hot-toast';
 
 // Initialize mermaid with some defaults
 mermaid.initialize({
@@ -109,12 +110,6 @@ const Mermaid = ({ chart }) => {
 
   return (
     <div className="mermaid-container bg-slate-900/40 dark:bg-black/20 p-4 rounded-2xl border border-slate-200/50 dark:border-white/5 overflow-x-auto no-scrollbar shadow-inner mt-4 group transition-all duration-300 hover:border-brand-500/30">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
-          Visual Logic
-        </span>
-      </div>
       <div ref={ref} className="mermaid-svg flex justify-center [&>svg]:max-w-full [&>svg]:h-auto" />
     </div>
   );

@@ -37,6 +37,22 @@ export function PlatformBadge({ platform = '' }) {
     color = 'text-green-700 dark:text-green-400';
     bg = 'bg-green-50 dark:bg-green-500/10';
     border = 'border-green-200 dark:border-green-500/20';
+  } else if (p === 'codeforces') {
+    color = 'text-brand-700 dark:text-brand-400';
+    bg = 'bg-brand-50 dark:bg-brand-500/10';
+    border = 'border-brand-200 dark:border-brand-500/20';
+  } else if (p === 'codechef') {
+    color = 'text-amber-800 dark:text-amber-500';
+    bg = 'bg-amber-50 dark:bg-amber-500/10';
+    border = 'border-amber-200 dark:border-amber-500/20';
+  } else if (p === 'coding ninja') {
+    color = 'text-red-700 dark:text-red-400';
+    bg = 'bg-red-50 dark:bg-red-500/10';
+    border = 'border-red-200 dark:border-red-500/20';
+  } else if (p === 'cses sheet') {
+    color = 'text-cyan-700 dark:text-cyan-400';
+    bg = 'bg-cyan-50 dark:bg-cyan-500/10';
+    border = 'border-cyan-200 dark:border-cyan-500/20';
   } else {
     color = 'text-slate-700 dark:text-slate-300';
     bg = 'bg-slate-100 dark:bg-slate-800';

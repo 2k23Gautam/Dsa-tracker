@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../store/StoreContext.jsx';
 import { DifficultyBadge, StatusBadge, PatternChip } from '../components/Badges.jsx';
 import ProblemModal from '../components/ProblemModal.jsx';
+import ProblemViewerModal from '../components/ProblemViewerModal.jsx';
 import EmptyState from '../components/EmptyState.jsx';
-import { ExternalLink, Clock4, User, FolderKanban, Lightbulb, X } from 'lucide-react';
+import { ExternalLink, Clock4, User, FolderKanban, Lightbulb, X, Code2 } from 'lucide-react';
 
 export default function TopicBoard() {
   const { problems } = useStore();
@@ -12,6 +13,7 @@ export default function TopicBoard() {
   const [diffFilter, setDiffFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [approachModal, setApproachModal] = useState({ open: false, problem: null });
+  const [viewerModal, setViewerModal] = useState({ open: false, problem: null });
 
   const filtered = problems.filter(p => {
     if (diffFilter && p.difficulty !== diffFilter) return false;
@@ -74,24 +76,37 @@ export default function TopicBoard() {
 
               {/* Cards */}
               {ps.map(p => (
-                <button
+                <div
                   key={p.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => openEdit(p)}
                   className={`w-full text-left gradient-glass p-3.5 hover:border-brand-500/30 transition-all duration-200 cursor-pointer
-                    hover:-translate-y-0.5 hover:shadow-neon-sm
+                    hover:-translate-y-0.5 hover:shadow-neon-sm overflow-visible
                     ${p.status === 'Needs Revision' ? 'border-amber-400/30' : ''}`}
                 >
                   <div className="relative pr-6 mb-2">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-2">{p.name}</p>
-                    {p.approach && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setApproachModal({ open: true, problem: p }); }}
-                        className="absolute -right-1 -top-1 p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-md transition-colors"
-                        title="View Approach & Intuition"
-                      >
-                        <Lightbulb size={14} />
-                      </button>
-                    )}
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-2 uppercase tracking-tight">{p.name}</p>
+                    <div className="absolute -right-1 -top-1 flex flex-col gap-0.5">
+                      {p.approach && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setApproachModal({ open: true, problem: p }); }}
+                          className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-md transition-colors"
+                          title="View Approach & Intuition"
+                        >
+                          <Lightbulb size={14} />
+                        </button>
+                      )}
+                      {p.solutionCode && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setViewerModal({ open: true, problem: p }); }}
+                          className="p-1.5 text-slate-400 hover:text-[#569cd6] hover:bg-[#569cd6]/10 rounded-md transition-colors"
+                          title="View Code Solution"
+                        >
+                          <Code2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1 mb-2">
                     <DifficultyBadge difficulty={p.difficulty} />
@@ -105,7 +120,7 @@ export default function TopicBoard() {
                   <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
                     <span className="flex items-center gap-1"><Clock4 size={10} />{p.timeTaken || 0}m</span>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           ))}
@@ -113,6 +128,17 @@ export default function TopicBoard() {
       )}
 
       <ProblemModal open={modalOpen} onClose={closeModal} editProblem={editProblem} />
+      
+      <ProblemViewerModal 
+        open={viewerModal.open} 
+        onClose={() => setViewerModal({ open: false, problem: null })} 
+        problem={viewerModal.problem} 
+        onEdit={(p) => {
+          setViewerModal({ open: false, problem: null });
+          setEditProblem(p);
+          setModalOpen(true);
+        }}
+      />
       
       {approachModal.open && (
         <div className="modal-overlay z-[100]" onClick={() => setApproachModal({ open: false, problem: null })}>
@@ -135,8 +161,27 @@ export default function TopicBoard() {
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Problem</span>
                 <span className="text-sm font-bold text-slate-900 dark:text-white">{approachModal.problem?.name}</span>
               </div>
-              <div className="text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
-                {approachModal.problem?.approach || "No approach recorded for this problem yet."}
+              <div className="text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                {approachModal.problem?.approach ? (
+                  <ul className="space-y-3">
+                    {approachModal.problem.approach
+                      .replace(/([a-z0-9])\.\s+([A-Z])/g, '$1.\n$2')
+                      .split('\n')
+                      .map(line => line.trim())
+                      .filter(line => line.length > 0)
+                      .map((point, i) => {
+                        const cleanPoint = point.replace(/^(\d+[\.\)]|[-*])\s+/, '');
+                        return (
+                          <li key={i} className="flex gap-3 text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed group">
+                            <div className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500/40 group-hover:bg-amber-500 transition-colors shadow-[0_0_8px_rgba(245,158,11,0.2)]" />
+                            <span>{cleanPoint}</span>
+                          </li>
+                        );
+                    })}
+                  </ul>
+                ) : (
+                  <span className="italic opacity-60">No approach recorded for this problem yet.</span>
+                )}
               </div>
             </div>
           </div>

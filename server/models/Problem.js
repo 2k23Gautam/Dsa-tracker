@@ -17,8 +17,7 @@ const problemSchema = new mongoose.Schema({
   revisionDate: { type: String },
   dateSolved: { type: String },
   revisionCount: { type: Number, default: 0 },
-  isPOTD: { type: Boolean, default: false },
-  visualization: { type: String }
+  isPOTD: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Problem', problemSchema);

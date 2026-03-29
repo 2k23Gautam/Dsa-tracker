@@ -1,4 +1,4 @@
-export const PLATFORMS = ['LeetCode', 'GeeksForGeeks', 'Codeforces', 'CodeChef', 'Coding Ninja'];
+export const PLATFORMS = ['LeetCode', 'GeeksForGeeks', 'Codeforces', 'CodeChef', 'Coding Ninja', 'CSES Sheet'];
 
 export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
 

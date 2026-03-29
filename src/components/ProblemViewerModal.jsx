@@ -1,4 +1,5 @@
-import { X, CalendarDays, BrainCircuit, Activity, FileText, Code2, Edit2, Timer, HardDrive, Tag, Target } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, CalendarDays, BrainCircuit, Activity, FileText, Code2, Edit2, Timer, HardDrive, Tag, Target, GitBranch, Lightbulb } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { DifficultyBadge, StatusBadge, PlatformBadge } from './Badges.jsx';
@@ -20,10 +21,10 @@ export default function ProblemViewerModal({ open, onClose, problem, onEdit }) {
   else if (codeLower.includes('public class') || codeLower.includes('system.out')) language = 'java';
   else if (codeLower.includes('def ') || codeLower.includes('print(')) language = 'python';
 
-  return (
-    <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6" onClick={onClose}>
       <div 
-        className="w-full max-w-6xl h-full max-h-[90vh] flex flex-col bg-slate-50 dark:bg-[#0f1522] rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-white/10"
+        className="w-[calc(100vw-2rem)] md:w-[calc(100vw-4rem)] max-w-6xl h-[calc(100vh-2rem)] md:h-[calc(100vh-4rem)] max-h-[90vh] flex flex-col bg-slate-50 dark:bg-[#0f1522] rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-white/10 mx-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -56,7 +57,7 @@ export default function ProblemViewerModal({ open, onClose, problem, onEdit }) {
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
           
           {/* Left Panel: Analytics & Concepts */}
-          <div className="w-full md:w-1/3 flex flex-col border-r border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-[#0b101a] overflow-y-auto no-scrollbar pb-6 relative">
+          <div className="w-full md:w-80 shrink-0 flex flex-col border-r border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-[#0b101a] overflow-y-auto no-scrollbar pb-6 relative">
             
             {/* Meta Stats Grid */}
             <div className="p-6 grid grid-cols-2 gap-3 border-b border-slate-200 dark:border-white/5">
@@ -133,15 +134,30 @@ export default function ProblemViewerModal({ open, onClose, problem, onEdit }) {
             {/* Approach Notes */}
             <div className="p-6">
                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
-                 <FileText size={14} /> Approach & Intuition
+                 <Lightbulb size={14} className="text-amber-500" /> Approach & Intuition
                </h3>
-               <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium bg-white dark:bg-white/[0.02] p-4 rounded-2xl border border-slate-200 dark:border-white/[0.05]">
+               <div className="bg-white dark:bg-white/[0.02] p-4 rounded-2xl border border-slate-200 dark:border-white/[0.05]">
                  {problem.approach ? (
-                   problem.approach.split('\n').map((para, i) => (
-                      <p key={i} className={i > 0 ? 'mt-2' : ''}>{para}</p>
-                   ))
+                   <ul className="space-y-3">
+                     {problem.approach
+                       // Break long paragraphs into sentences by matching ". " followed by Capital letter
+                       .replace(/([a-z0-9])\.\s+([A-Z])/g, '$1.\n$2')
+                       .split('\n')
+                       .map(line => line.trim())
+                       .filter(line => line.length > 0)
+                       .map((point, i) => {
+                         // Clean up existing manual bullets to prevent double-bulleting
+                         const cleanPoint = point.replace(/^(\d+[\.\)]|[-*])\s+/, '');
+                         return (
+                           <li key={i} className="flex gap-3 text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed group">
+                             <div className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500/40 group-hover:bg-amber-500 transition-colors shadow-[0_0_8px_rgba(245,158,11,0.2)]" />
+                             <span>{cleanPoint}</span>
+                           </li>
+                         );
+                     })}
+                   </ul>
                  ) : (
-                   <span className="italic opacity-60">No approach logged.</span>
+                   <span className="text-sm italic text-slate-500 opacity-60">No approach logged.</span>
                  )}
                </div>
 
@@ -158,7 +174,7 @@ export default function ProblemViewerModal({ open, onClose, problem, onEdit }) {
           </div>
 
           {/* Right Panel: Official Viewer Engine */}
-          <div className="flex-1 flex flex-col bg-[#1e1e1e] border-t md:border-t-0 border-slate-200 dark:border-white/5 relative">
+          <div className="flex-1 min-w-0 flex flex-col bg-[#1e1e1e] border-t md:border-t-0 border-slate-200 dark:border-white/5 relative">
              <div className="shrink-0 bg-[#252526] border-b border-[#3c3c3c] flex">
                 <div className="px-5 py-2.5 text-[12px] font-mono flex items-center gap-2 select-none border-t-2 border-[#569cd6] text-[#d4d4d4] bg-[#1e1e1e]">
                   <Code2 size={14} className="text-[#569cd6]" />
@@ -217,5 +233,5 @@ export default function ProblemViewerModal({ open, onClose, problem, onEdit }) {
 
       </div>
     </div>
-  );
+  , document.body);
 }

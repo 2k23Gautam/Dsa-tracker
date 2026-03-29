@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { format } from 'date-fns';
 import { useAuth } from './AuthContext.jsx';
 import { SEED_PROBLEMS } from './data.js';
+import toast from 'react-hot-toast';
 
 const STORAGE_KEY = 'dsa_tracker_v1';
 const THEME_KEY   = 'dsa_theme';
@@ -51,19 +52,26 @@ export function StoreProvider({ children }) {
         },
         body: JSON.stringify(p)
       });
+
       if (res.ok) {
         const saved = await res.json();
         setProblems(prev => [saved, ...prev]);
+        toast.success('Problem added successfully!');
         return saved;
+      } else {
+        const error = await res.json();
+        toast.error(error.message || 'Failed to add problem');
+        return null;
       }
     } catch (err) {
+      toast.error('Connection error. Server may be down.');
       console.error(err);
     }
     return null;
   }, [token]);
 
   const updateProblem = useCallback(async (id, updates) => {
-    if (!token) return;
+    if (!token) return null;
     try {
       const res = await fetch(`/api/problems/${id}`, {
         method: 'PUT',
@@ -73,13 +81,22 @@ export function StoreProvider({ children }) {
         },
         body: JSON.stringify(updates)
       });
+
       if (res.ok) {
         const saved = await res.json();
         setProblems(prev => prev.map(p => p.id === id ? saved : p));
+        toast.success('Problem updated!');
+        return saved;
+      } else {
+        const error = await res.json();
+        toast.error(error.message || 'Update failed');
+        return null;
       }
     } catch (err) {
+      toast.error('Connection error.');
       console.error(err);
     }
+    return null;
   }, [token]);
 
   const deleteProblem = useCallback(async (id) => {
@@ -91,8 +108,12 @@ export function StoreProvider({ children }) {
       });
       if (res.ok) {
         setProblems(prev => prev.filter(p => p.id !== id));
+        toast.success('Problem deleted');
+      } else {
+        toast.error('Failed to delete problem');
       }
     } catch (err) {
+      toast.error('Connection error.');
       console.error(err);
     }
   }, [token]);

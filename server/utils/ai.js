@@ -26,23 +26,15 @@ async function suggestProblemMetadata(problemInput, solutionCode = "") {
       "patterns": ["Pattern1", "Pattern2"],
       "timeComplexity": "e.g., O(n)",
       "spaceComplexity": "e.g., O(1)",
-      "suggestedApproach": "A short, revision-friendly explanation (2-4 bullet points). Focus on the core intuition and logical steps. No code. No examples. Simple, interview-ready language.",
-      "visualization": "Mermaid.js code (flowchart TD or sequenceDiagram) that visually explains the algorithm. Use clean, high-level labels."
+      "suggestedApproach": "A clear, explanatory walkthrough of the logic and intuition. Break down the core idea so the user can easily 'feel' the code and understand exactly why it works. Write in a conversational, interview-ready tone. Use bullet points for clear steps, but ensure the logic is thoroughly explained."
     }
 
     Formatting Guidelines:
     - Combine Approach + Intuition into the 'suggestedApproach' field.
-    - Use bullet points.
-    - Keep it very concise (2-4 lines total).
-    - Assume this is for last-day interview/contest revision.
-    - Style: No code, no examples, no extra explanations.
+    - Make the explanation feel intuitive so the logic is obvious.
+    - Assume this is for last-day interview/contest revision but needs to be thorough enough to grasp the 'trick'.
     
-    Mermaid Rules:
-    - All node labels MUST be in double quotes (e.g., A[\"Label\"]).
-    - Avoid parenthesis or special characters inside labels.
-    - Use simple alphanumeric IDs for nodes.
-    - Ensure the syntax is valid.
-    - Return NO markdown, NO preamble, ONLY the raw JSON object.
+    Return NO markdown, NO preamble, ONLY the raw JSON object.
   `;
 
   // Try Gemini First if key exists
@@ -50,10 +42,11 @@ async function suggestProblemMetadata(problemInput, solutionCode = "") {
     const genAI = new GoogleGenerativeAI(geminiKey);
     // User requested latest models: 3.1 series and 2.5 series
     const modelsToTry = [
+      "gemini-2.5-pro",
+      "gemini-3.5-pro", 
       "gemini-3.1-pro-preview", 
       "gemini-3.1-flash-lite-preview",
       "gemini-3-flash-preview",
-      "gemini-2.5-pro",
       "gemini-2.5-flash",
       "gemini-2.0-flash",
       "gemini-1.5-flash"
@@ -132,14 +125,16 @@ function parseAiResponse(text) {
     return key ? (raw[key] || raw[key.toLowerCase()]) : null;
   };
 
+  const approachVal = getVal(['suggestedApproach', 'approach']);
+  const approach = Array.isArray(approachVal) ? approachVal.join('\n') : (approachVal || "");
+
   return {
     topics: Array.isArray(getVal(['topics'])) ? getVal(['topics']) : (getVal(['topics']) ? [getVal(['topics'])] : []),
     patterns: Array.isArray(getVal(['patterns'])) ? getVal(['patterns']) : (getVal(['patterns']) ? [getVal(['patterns'])] : []),
     difficulty: getVal(['difficulty']) || "",
     timeComplexity: getVal(['timeComplexity']) || "",
     spaceComplexity: getVal(['spaceComplexity']) || "",
-    suggestedApproach: getVal(['suggestedApproach']) || "",
-    visualization: (getVal(['visualization']) || "").replace(/```mermaid|```/g, "").trim()
+    suggestedApproach: approach
   };
 }
 

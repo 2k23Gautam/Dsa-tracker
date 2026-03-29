@@ -112,7 +112,7 @@
 
   /* ── Modal ──────────────────────────────────────────────────────── */
   .modal-overlay {
-    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    @apply fixed inset-0 z-[200] flex items-center justify-center p-4;
     background: rgba(15, 23, 42, 0.4);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
@@ -149,7 +149,7 @@
     background: rgba(255,255,255,0.05);
   }
   .kanban-col {
-    @apply flex flex-col gap-4 min-w-[280px] w-[280px] snap-center;
+    @apply flex flex-col gap-4 min-w-[280px] w-[280px] shrink-0 snap-center;
   }
   
   @media (max-width: 768px) {

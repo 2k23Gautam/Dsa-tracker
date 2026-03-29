@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Star, CheckCircle2, Plus, Zap } from 'lucide-react';
+import { Star, CheckCircle2, Plus, Zap, Code2 } from 'lucide-react';
 import { useStore } from '../store/StoreContext.jsx';
 import { DifficultyBadge, StatusBadge, PlatformBadge } from '../components/Badges.jsx';
 import ProblemModal from '../components/ProblemModal.jsx';
+import ProblemViewerModal from '../components/ProblemViewerModal.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 
 export default function TodayDSA() {
   const { problems, todayStr } = useStore();
   const [editProblem, setEditProblem] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [viewerModal, setViewerModal] = useState({ open: false, problem: null });
 
   const potdProblems   = problems.filter(p => p.isPOTD);
   const solvedToday    = problems.filter(p => (p.dateSolved || p.solvedDate || '').substring(0, 10) === todayStr);
@@ -45,6 +47,7 @@ export default function TodayDSA() {
         onEdit={openEdit}
         accentColor="border-amber-400/50"
         glowColor="rgba(245,158,11,0.08)"
+        setViewerModal={setViewerModal}
       />
 
       {/* Solved Today */}
@@ -57,6 +60,7 @@ export default function TodayDSA() {
         onEdit={openEdit}
         accentColor="border-emerald-400/50"
         glowColor="rgba(16,185,129,0.08)"
+        setViewerModal={setViewerModal}
       />
 
       {/* Overdue Revision */}
@@ -69,15 +73,27 @@ export default function TodayDSA() {
           onEdit={openEdit}
           accentColor="border-red-400/50"
           glowColor="rgba(239,68,68,0.08)"
+          setViewerModal={setViewerModal}
         />
       )}
 
       <ProblemModal open={modalOpen} onClose={closeModal} editProblem={editProblem} />
+      
+      <ProblemViewerModal 
+        open={viewerModal.open} 
+        onClose={() => setViewerModal({ open: false, problem: null })} 
+        problem={viewerModal.problem} 
+        onEdit={(p) => {
+          setViewerModal({ open: false, problem: null });
+          setEditProblem(p);
+          setModalOpen(true);
+        }}
+      />
     </div>
   );
 }
 
-function Section({ title, icon, count, empty, items, onEdit, accentColor, glowColor }) {
+function Section({ title, icon, count, empty, items, onEdit, setViewerModal, accentColor, glowColor }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
@@ -93,11 +109,13 @@ function Section({ title, icon, count, empty, items, onEdit, accentColor, glowCo
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {items.map(p => (
-            <button
+            <div
               key={p.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onEdit(p)}
               className={`text-left gradient-glass p-4 border-l-[3px] ${accentColor} transition-all duration-300 space-y-2
-                         hover:-translate-y-0.5 hover:shadow-neon-sm`}
+                         hover:-translate-y-0.5 hover:shadow-neon-sm overflow-visible cursor-pointer`}
               style={{ '--hover-glow': glowColor }}
             >
               <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm line-clamp-2">{p.name}</p>
@@ -112,11 +130,27 @@ function Section({ title, icon, count, empty, items, onEdit, accentColor, glowCo
                 </span>
                 <div className="flex items-center gap-1.5">
                   {p.timeTaken && <span className="text-[10px] text-slate-400 dark:text-slate-500 mr-1 font-mono">⏱ {p.timeTaken}m</span>}
-                  {p.approach && <span className="p-1 px-1.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-bold" title="Has Approach">💡</span>}
-                  {p.solutionCode && <span className="p-1 px-1.5 rounded bg-blue-500/10 text-blue-500 text-[10px] font-bold" title="Has Code">{'</>'}</span>}
+                  {p.approach && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setViewerModal({ open: true, problem: p }); }}
+                      className="p-1 px-1.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-bold hover:bg-amber-500/20 transition-colors" 
+                      title="View Approach"
+                    >
+                      💡
+                    </button>
+                  )}
+                  {p.solutionCode && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setViewerModal({ open: true, problem: p }); }}
+                      className="p-1 px-1.5 rounded bg-[#569cd6]/10 text-[#569cd6] hover:bg-[#569cd6]/20 transition-colors" 
+                      title="View Code Solution"
+                    >
+                      <Code2 size={12} />
+                    </button>
+                  )}
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}

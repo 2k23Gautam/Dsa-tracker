@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowUpDown, Maximize2, Edit2, CheckCircle2, Star, Lightbulb, X, Code2 } from 'lucide-react';
 import { useStore } from '../store/StoreContext.jsx';
 import { DifficultyBadge, PlatformBadge, TopicBadge, PatternBadge } from './Badges.jsx';
@@ -125,7 +126,7 @@ export default function ProblemTable({ problems, onEdit }) {
       </div>
 
       {/* Approach Modal */}
-      {approachModal.open && (
+      {approachModal.open && createPortal(
         <div className="modal-overlay z-[100]" onClick={() => setApproachModal({ open: false, problem: null })}>
           <div className="modal-box flex flex-col max-w-lg w-full" onClick={e => e.stopPropagation()}>
             <div className="px-6 py-4 flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02]">
@@ -142,12 +143,32 @@ export default function ProblemTable({ problems, onEdit }) {
                 <span className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Problem</span>
                 <span className="text-sm font-bold text-slate-900 dark:text-white">{approachModal.problem?.name}</span>
               </div>
-              <div className="text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
-                {approachModal.problem?.approach || "No approach recorded for this problem yet."}
+              <div className="text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                {approachModal.problem?.approach ? (
+                  <ul className="space-y-3">
+                    {approachModal.problem.approach
+                      .replace(/([a-z0-9])\.\s+([A-Z])/g, '$1.\n$2')
+                      .split('\n')
+                      .map(line => line.trim())
+                      .filter(line => line.length > 0)
+                      .map((point, i) => {
+                        const cleanPoint = point.replace(/^(\d+[\.\)]|[-*])\s+/, '');
+                        return (
+                          <li key={i} className="flex gap-3 text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed group">
+                            <div className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500/40 group-hover:bg-amber-500 transition-colors shadow-[0_0_8px_rgba(245,158,11,0.2)]" />
+                            <span>{cleanPoint}</span>
+                          </li>
+                        );
+                    })}
+                  </ul>
+                ) : (
+                  <span className="italic opacity-60">No approach recorded for this problem yet.</span>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Comprehensive Problem Viewer Modal */}

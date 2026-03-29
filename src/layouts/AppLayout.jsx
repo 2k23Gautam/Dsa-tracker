@@ -20,7 +20,7 @@ export default function AppLayout() {
         />
       )}
 
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative z-10 w-full">
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative w-full">
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 w-full max-w-[1600px] mx-auto">
           <div className="animate-fade-in h-full">
