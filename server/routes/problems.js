@@ -107,12 +107,17 @@ router.delete('/:id', auth, async (req, res) => {
 router.post('/ai-suggest', auth, async (req, res) => {
   try {
     const { name, link, solutionCode } = req.body;
-    const input = link || name;
-    if (!input) return res.status(400).json({ message: 'Name or link required' });
+    const input = link || name || 'Unknown Problem';
+
+    if (!solutionCode && !name && !link) {
+      return res.status(400).json({ message: 'Provide at least a problem name, link, or solution code.' });
+    }
 
     const metadata = await suggestProblemMetadata(input, solutionCode);
+    console.log('[AI Result]', JSON.stringify(metadata, null, 2));
     res.json(metadata);
   } catch (err) {
+    console.error('[AI Error]', err.message);
     res.status(500).json({ message: err.message || 'AI extraction failed' });
   }
 });

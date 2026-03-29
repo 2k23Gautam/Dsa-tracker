@@ -2,8 +2,8 @@ const axios = require('axios');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 /**
- * Suggest metadata for a problem using Gemini 2.0 Flash (preferred) 
- * or Groq API (fallback), now aware of the user's solution and including visualization.
+ * Suggest metadata for a DSA problem based on the problem name/link
+ * and (most importantly) the user's submitted solution code.
  */
 async function suggestProblemMetadata(problemInput, solutionCode = "") {
   const geminiKey = process.env.GEMINI_API_KEY;
@@ -13,70 +13,66 @@ async function suggestProblemMetadata(problemInput, solutionCode = "") {
     throw new Error("Neither GEMINI_API_KEY nor GROQ_API_KEY is configured in .env");
   }
 
-  // Common Prompt
-  const prompt = `
-    You are a DSA (Data Structures and Algorithms) expert. 
-    Problem: "${problemInput}"
-    ${solutionCode ? `User's Solution Code:\n\`\`\`\n${solutionCode}\n\`\`\`` : ''}
-    
-    Analyze the problem ${solutionCode ? 'and the provided solution ' : ''}to return ONLY a raw JSON object:
-    {
-      "topics": ["Topic1", "Topic2"],
-      "difficulty": "Easy" | "Medium" | "Hard",
-      "patterns": ["Pattern1", "Pattern2"],
-      "timeComplexity": "e.g., O(n)",
-      "spaceComplexity": "e.g., O(1)",
-      "suggestedApproach": "A clear, explanatory walkthrough of the logic and intuition. Break down the core idea so the user can easily 'feel' the code and understand exactly why it works. Write in a conversational, interview-ready tone. Use bullet points for clear steps, but ensure the logic is thoroughly explained."
-    }
+  const hasSolution = solutionCode && solutionCode.trim().length > 0;
+  const hasContext = problemInput && problemInput !== 'Unknown Problem';
 
-    Formatting Guidelines:
-    - Combine Approach + Intuition into the 'suggestedApproach' field.
-    - Make the explanation feel intuitive so the logic is obvious.
-    - Assume this is for last-day interview/contest revision but needs to be thorough enough to grasp the 'trick'.
-    
-    Return NO markdown, NO preamble, ONLY the raw JSON object.
-  `;
+  // Build a clean, minimal, unambiguous prompt
+  const prompt = `You are a senior DSA (Data Structures & Algorithms) expert. Your job is to analyze the following and return a JSON object.
 
-  // Try Gemini First if key exists
+${hasContext ? `Problem: "${problemInput}"` : ''}
+${hasSolution ? `\nUser's Solution Code:\n\`\`\`\n${solutionCode.trim()}\n\`\`\`` : ''}
+
+Instructions:
+- topics: List the relevant DSA topics from the code/problem (e.g. "Array", "String", "Tree", "Graph", "DP", "Heap", "Stack", "Linked List", "Binary Search", "Math").
+- patterns: List the algorithmic patterns used (e.g. "Two Pointers", "Sliding Window", "DFS", "BFS", "Binary Search", "Greedy", "Hashing", "Backtracking", "Recursion + Memoization").
+- difficulty: The problem difficulty ("Easy", "Medium", or "Hard").
+- timeComplexity: ${hasSolution ? "Based ONLY on the provided code logic (not the optimal solution)." : "The time complexity of the standard approach."}
+- spaceComplexity: ${hasSolution ? "Based ONLY on the provided code logic (not the optimal solution)." : "The space complexity of the standard approach."}
+- suggestedApproach: ${hasSolution ? "A 2-3 sentence plain English explanation of how the provided code works. NO numbered lists, NO bullet points, NO newlines — write as a single flowing paragraph." : "A brief 2-3 sentence explanation of the best approach to solve this problem. NO lists, NO numbers, single flowing paragraph."}
+
+Respond with ONLY a raw JSON object (no markdown, no \`\`\`, no extra text):
+{
+  "topics": ["Array"],
+  "difficulty": "Medium",
+  "patterns": ["Two Pointers"],
+  "timeComplexity": "O(n)",
+  "spaceComplexity": "O(1)",
+  "suggestedApproach": "Plain english explanation here."
+}`;
+
+  // Try Gemini models in order
   if (geminiKey) {
     const genAI = new GoogleGenerativeAI(geminiKey);
-    // User requested latest models: 3.1 series and 2.5 series
     const modelsToTry = [
-      "gemini-2.5-pro",
-      "gemini-3.5-pro", 
-      "gemini-3.1-pro-preview", 
-      "gemini-3.1-flash-lite-preview",
-      "gemini-3-flash-preview",
       "gemini-2.5-flash",
       "gemini-2.0-flash",
-      "gemini-1.5-flash"
+      "gemini-1.5-flash",
     ];
 
     for (const modelName of modelsToTry) {
       try {
-        console.log(`Using ${modelName} for suggestion...`);
+        console.log(`[AI] Trying ${modelName}...`);
         const model = genAI.getGenerativeModel({ model: modelName });
 
         const result = await model.generateContent({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.2,
+            temperature: 0.1,
             responseMimeType: "application/json",
           }
         });
 
         const text = result.response.text();
+        console.log(`[AI] Raw response from ${modelName}:`, text.substring(0, 300));
         return parseAiResponse(text);
       } catch (err) {
-        console.warn(`${modelName} failed:`, err.message);
-        // If it's the last Gemini model, and we have Groq, move on.
-        // Otherwise, if no Groq, throw the error.
+        console.warn(`[AI] ${modelName} failed:`, err.message);
         if (modelName === modelsToTry[modelsToTry.length - 1] && !groqKey) {
           throw err;
         }
       }
     }
-    console.log("All Gemini models failed. Falling back to Groq...");
+    console.log("[AI] All Gemini models failed. Falling back to Groq...");
   }
 
   // Fallback to Groq
@@ -85,12 +81,13 @@ async function suggestProblemMetadata(problemInput, solutionCode = "") {
     const MODEL = "llama-3.3-70b-versatile";
 
     try {
+      console.log("[AI] Trying Groq...");
       const response = await axios.post(
         API_URL,
         {
           model: MODEL,
           messages: [{ role: "user", content: prompt }],
-          temperature: 0.2,
+          temperature: 0.1,
           response_format: { type: "json_object" }
         },
         {
@@ -102,6 +99,7 @@ async function suggestProblemMetadata(problemInput, solutionCode = "") {
       );
 
       const text = response.data?.choices?.[0]?.message?.content;
+      console.log("[AI] Raw Groq response:", text?.substring(0, 300));
       return parseAiResponse(text);
     } catch (err) {
       const errorMsg = err.response?.data?.error?.message || err.message;
@@ -111,32 +109,49 @@ async function suggestProblemMetadata(problemInput, solutionCode = "") {
 }
 
 /**
- * Helper to clean and parse AI JSON responses
+ * Parse and sanitize the AI JSON response
  */
 function parseAiResponse(text) {
   if (!text) throw new Error("Empty response from AI");
 
-  // Clean markdown backticks if any
-  const jsonStr = text.replace(/```json|```/g, "").trim();
+  // Strip markdown code fences if present
+  const jsonStr = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
   const raw = JSON.parse(jsonStr);
 
-  const getVal = (keys) => {
-    const key = keys.find(k => raw[k] !== undefined || raw[k.toLowerCase()] !== undefined);
-    return key ? (raw[key] || raw[key.toLowerCase()]) : null;
+  // Helper to get a field by multiple possible key names (case-insensitive)
+  const get = (keys) => {
+    for (const k of keys) {
+      if (raw[k] !== undefined) return raw[k];
+      const lk = k.toLowerCase();
+      if (raw[lk] !== undefined) return raw[lk];
+    }
+    return null;
   };
 
-  const approachVal = getVal(['suggestedApproach', 'approach']);
-  const approach = Array.isArray(approachVal) ? approachVal.join('\n') : (approachVal || "");
+  // Sanitize approach: remove numbered lists, bullets, and collapse to one line
+  let approach = get(['suggestedApproach', 'approach', 'suggested_approach']) || "";
+  if (Array.isArray(approach)) approach = approach.join(' ');
+  approach = approach.replace(/^\s*\d+[.)]\s*/gm, '');  // Remove "1. " "2) "
+  approach = approach.replace(/^\s*[-*•]\s*/gm, '');     // Remove "- " "* "
+  approach = approach.replace(/\n+/g, ' ');              // No newlines
+  approach = approach.replace(/\s{2,}/g, ' ').trim();    // Normalize spaces
+
+  // Sanitize arrays
+  const toArray = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val.filter(v => typeof v === 'string' && v.trim());
+    if (typeof val === 'string') return [val.trim()].filter(Boolean);
+    return [];
+  };
 
   return {
-    topics: Array.isArray(getVal(['topics'])) ? getVal(['topics']) : (getVal(['topics']) ? [getVal(['topics'])] : []),
-    patterns: Array.isArray(getVal(['patterns'])) ? getVal(['patterns']) : (getVal(['patterns']) ? [getVal(['patterns'])] : []),
-    difficulty: getVal(['difficulty']) || "",
-    timeComplexity: getVal(['timeComplexity']) || "",
-    spaceComplexity: getVal(['spaceComplexity']) || "",
+    topics: toArray(get(['topics'])),
+    patterns: toArray(get(['patterns'])),
+    difficulty: get(['difficulty']) || "",
+    timeComplexity: get(['timeComplexity', 'time_complexity']) || "",
+    spaceComplexity: get(['spaceComplexity', 'space_complexity']) || "",
     suggestedApproach: approach
   };
 }
 
 module.exports = { suggestProblemMetadata };
-
