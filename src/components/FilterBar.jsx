@@ -97,16 +97,52 @@ export default function FilterBar({ searchQuery, setSearchQuery }) {
           </div>
 
           {/* Quick Date Filters - Footer of panel */}
-          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/[0.06] flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
-            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5 shrink-0 uppercase tracking-widest"><Calendar size={14}/> Date</span>
+          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/[0.06] flex flex-wrap items-center gap-4 overflow-x-auto no-scrollbar pb-1">
+            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5 shrink-0 uppercase tracking-widest"><Calendar size={14}/> Date Range</span>
             <div className="flex gap-2 shrink-0">
               <button onClick={() => setDateRange(null, null)} className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border transition-colors ${!filters.dateRange.start ? 'chip-active' : 'chip-inactive'}`}>Any Time</button>
               <button 
-                onClick={() => { const d=new Date(); setDateRange(d.toISOString(), d.toISOString()); }} 
-                className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border transition-colors ${filters.dateRange.start ? 'chip-active' : 'chip-inactive'}`}
+                onClick={() => { 
+                  const d = new Date(); 
+                  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                  const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+                  setDateRange(start.toISOString(), end.toISOString()); 
+                }} 
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border transition-colors ${filters.dateRange.start && new Date(filters.dateRange.start).toDateString() === new Date().toDateString() ? 'chip-active' : 'chip-inactive'}`}
               >
                 Today
               </button>
+            </div>
+            
+            <div className="flex items-center gap-2 shrink-0 border-l border-slate-200 dark:border-white/[0.06] pl-4">
+              <input 
+                type="date" 
+                className="input-field py-1 px-2 text-xs w-[120px]"
+                value={filters.dateRange.start ? new Date(filters.dateRange.start).toISOString().split('T')[0] : ''}
+                onChange={e => {
+                  if (!e.target.value) {
+                    setDateRange(null, filters.dateRange.end);
+                  } else {
+                    const start = new Date(e.target.value);
+                    setDateRange(start.toISOString(), filters.dateRange.end);
+                  }
+                }}
+              />
+              <span className="text-slate-400 text-xs">to</span>
+              <input 
+                type="date" 
+                className="input-field py-1 px-2 text-xs w-[120px]"
+                value={filters.dateRange.end ? new Date(filters.dateRange.end).toISOString().split('T')[0] : ''}
+                onChange={e => {
+                  if (!e.target.value) {
+                    setDateRange(filters.dateRange.start, null);
+                  } else {
+                    const d = new Date(e.target.value);
+                    const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+                    setDateRange(filters.dateRange.start, end.toISOString());
+                  }
+                }}
+              />
             </div>
           </div>
         </div>
@@ -155,11 +191,19 @@ export function applyFilters(problems, filters, searchQuery = '') {
     if (filters.topic !== 'All' && (!p.topics || !p.topics.includes(filters.topic))) return false;
     if (filters.pattern !== 'All' && (!p.patterns || !p.patterns.includes(filters.pattern))) return false;
     if (filters.potd && !p.isPOTD) return false;
-    if (filters.dateRange?.start) {
+    if (filters.dateRange?.start || filters.dateRange?.end) {
       if (!p.dateSolved) return false;
       const pDate = new Date(p.dateSolved);
-      const sDate = new Date(filters.dateRange.start);
-      if (pDate < sDate) return false;
+      
+      if (filters.dateRange.start) {
+        const sDate = new Date(filters.dateRange.start);
+        if (pDate < sDate) return false;
+      }
+      
+      if (filters.dateRange.end) {
+        const eDate = new Date(filters.dateRange.end);
+        if (pDate > eDate) return false;
+      }
     }
     return true;
   }).sort((a, b) => {

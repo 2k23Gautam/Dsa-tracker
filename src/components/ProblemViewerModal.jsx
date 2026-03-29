@@ -1,11 +1,26 @@
 import { createPortal } from 'react-dom';
-import { X, CalendarDays, BrainCircuit, Activity, FileText, Code2, Edit2, Timer, HardDrive, Tag, Target, GitBranch, Lightbulb } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useStore } from '../store/StoreContext.jsx';
+import toast from 'react-hot-toast';
+import { X, CalendarDays, BrainCircuit, Activity, FileText, Code2, Edit2, Timer, HardDrive, Tag, Target, GitBranch, Lightbulb, Loader2 } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { DifficultyBadge, StatusBadge, PlatformBadge } from './Badges.jsx';
 import MarkdownRenderer from './MarkdownRenderer.jsx';
 
 export default function ProblemViewerModal({ open, onClose, problem, onEdit }) {
+  const { updateProblem } = useStore();
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [editedCode, setEditedCode] = useState('');
+  const [isSavingCode, setIsSavingCode] = useState(false);
+
+  useEffect(() => {
+    if (problem) {
+      setEditedCode(problem.solutionCode || '');
+      setIsEditingCode(false);
+    }
+  }, [problem]);
+
   if (!open || !problem) return null;
 
   const handleEdit = () => {
@@ -21,6 +36,19 @@ export default function ProblemViewerModal({ open, onClose, problem, onEdit }) {
   if (codeLower.includes('#include') || codeLower.includes('std::')) language = 'cpp';
   else if (codeLower.includes('public class') || codeLower.includes('system.out')) language = 'java';
   else if (codeLower.includes('def ') || codeLower.includes('print(')) language = 'python';
+
+  const handleSaveCode = async () => {
+    setIsSavingCode(true);
+    try {
+      await updateProblem(problem._id || problem.id, { ...problem, solutionCode: editedCode });
+      toast.success('Code saved successfully');
+      setIsEditingCode(false);
+    } catch (err) {
+      toast.error('Failed to save code');
+    } finally {
+      setIsSavingCode(false);
+    }
+  };
 
   return createPortal(
     <div className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6" onClick={onClose}>
@@ -159,17 +187,46 @@ export default function ProblemViewerModal({ open, onClose, problem, onEdit }) {
 
           {/* Right Panel: Official Viewer Engine */}
           <div className="flex-1 min-w-0 flex flex-col bg-[#1e1e1e] border-t md:border-t-0 border-slate-200 dark:border-white/5 relative">
-             <div className="shrink-0 bg-[#252526] border-b border-[#3c3c3c] flex">
+             <div className="shrink-0 bg-[#252526] border-b border-[#3c3c3c] flex items-center justify-between pr-4">
                 <div className="px-5 py-2.5 text-[12px] font-mono flex items-center gap-2 select-none border-t-2 border-[#569cd6] text-[#d4d4d4] bg-[#1e1e1e]">
                   <Code2 size={14} className="text-[#569cd6]" />
                   solution.{language === 'cpp' ? 'cpp' : language === 'java' ? 'java' : language === 'python' ? 'py' : 'js'}
                 </div>
+                <div className="flex items-center gap-2">
+                   {!isEditingCode ? (
+                      <button onClick={() => setIsEditingCode(true)} className="text-[11px] font-bold tracking-wide flex items-center gap-1.5 px-2.5 py-1 text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded border border-white/10 transition-colors uppercase">
+                        <Edit2 size={12} /> Edit Code
+                      </button>
+                   ) : (
+                      <>
+                        <button onClick={() => { setIsEditingCode(false); setEditedCode(problem.solutionCode || '') }} className="text-[11px] font-bold tracking-wide px-2.5 py-1 text-slate-400 hover:text-white transition-colors uppercase">
+                           Cancel
+                        </button>
+                        <button onClick={handleSaveCode} disabled={isSavingCode} className="text-[11px] font-bold tracking-wide flex items-center gap-1.5 px-3 py-1 bg-brand-500 hover:bg-brand-600 text-white rounded transition-colors uppercase disabled:opacity-50">
+                           {isSavingCode ? <Loader2 size={12} className="animate-spin" /> : <HardDrive size={12} />} Save
+                        </button>
+                      </>
+                   )}
+                </div>
              </div>
              
-             {!code ? (
+             {isEditingCode ? (
+                <div className="flex-1 overflow-auto bg-[#1e1e1e] border-t border-[#3c3c3c] relative">
+                   <textarea
+                     value={editedCode}
+                     onChange={e => setEditedCode(e.target.value)}
+                     className="w-full h-full min-h-[300px] bg-transparent text-[#d4d4d4] p-6 font-mono text-[13px] outline-none resize-none no-scrollbar whitespace-pre"
+                     spellCheck="false"
+                     placeholder="Paste or write your solution code here..."
+                   />
+                </div>
+             ) : !code ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-12 text-[#6a6a6a]">
                   <Code2 size={48} className="mb-4 opacity-30 text-[#569cd6]" />
-                  <p className="text-[14px] font-mono">No solution code saved.</p>
+                  <p className="text-[14px] font-mono mb-6">No solution code saved.</p>
+                  <button onClick={() => setIsEditingCode(true)} className="px-4 py-2 bg-brand-500/10 text-brand-500 hover:bg-brand-500/20 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors">
+                     <Edit2 size={16} /> Add Code
+                  </button>
                 </div>
              ) : (
                 <div className="flex-1 overflow-auto relative no-scrollbar">
