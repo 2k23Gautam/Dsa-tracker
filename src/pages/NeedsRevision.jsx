@@ -75,7 +75,7 @@ export default function NeedsRevision() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm line-clamp-2">{p.name}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-600 mt-0.5">{p.person || '—'} · {p.platform}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-600 mt-0.5">{p.platform}</p>
                   </div>
                   <span className="text-[10px] font-bold bg-amber-400/15 text-amber-400 px-2 py-0.5 rounded-full whitespace-nowrap">
                     Rev #{p.revisionCount || 0}

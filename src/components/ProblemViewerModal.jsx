@@ -3,6 +3,7 @@ import { X, CalendarDays, BrainCircuit, Activity, FileText, Code2, Edit2, Timer,
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { DifficultyBadge, StatusBadge, PlatformBadge } from './Badges.jsx';
+import MarkdownRenderer from './MarkdownRenderer.jsx';
 
 export default function ProblemViewerModal({ open, onClose, problem, onEdit }) {
   if (!open || !problem) return null;
@@ -138,24 +139,7 @@ export default function ProblemViewerModal({ open, onClose, problem, onEdit }) {
                </h3>
                <div className="bg-white dark:bg-white/[0.02] p-4 rounded-2xl border border-slate-200 dark:border-white/[0.05]">
                  {problem.approach ? (
-                   <ul className="space-y-3">
-                     {problem.approach
-                       // Break long paragraphs into sentences by matching ". " followed by Capital letter
-                       .replace(/([a-z0-9])\.\s+([A-Z])/g, '$1.\n$2')
-                       .split('\n')
-                       .map(line => line.trim())
-                       .filter(line => line.length > 0)
-                       .map((point, i) => {
-                         // Clean up existing manual bullets to prevent double-bulleting
-                         const cleanPoint = point.replace(/^(\d+[\.\)]|[-*])\s+/, '');
-                         return (
-                           <li key={i} className="flex gap-3 text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed group">
-                             <div className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-500/40 group-hover:bg-amber-500 transition-colors shadow-[0_0_8px_rgba(245,158,11,0.2)]" />
-                             <span>{cleanPoint}</span>
-                           </li>
-                         );
-                     })}
-                   </ul>
+                   <MarkdownRenderer content={problem.approach} />
                  ) : (
                    <span className="text-sm italic text-slate-500 opacity-60">No approach logged.</span>
                  )}

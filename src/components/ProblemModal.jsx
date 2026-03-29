@@ -4,6 +4,7 @@ import { useStore } from '../store/StoreContext.jsx';
 import { useAuth } from '../store/AuthContext.jsx';
 import { PLATFORMS, DIFFICULTIES, STATUSES, TOPICS, PATTERNS, TIME_COMPLEXITIES, SPACE_COMPLEXITIES } from '../store/data.js';
 import TagInput from './TagInput.jsx';
+import MarkdownEditor from './MarkdownEditor.jsx';
 import toast from 'react-hot-toast';
 
 export default function ProblemModal({ open, onClose, editProblem = null, initialData = null }) {
@@ -93,7 +94,6 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
         difficulty: suggestions.difficulty || prev.difficulty,
         patterns: Array.from(new Set([...(prev.patterns || []), ...(suggestions.patterns || [])])),
         timeComplexity: suggestions.timeComplexity || prev.timeComplexity,
-        spaceComplexity: suggestions.spaceComplexity || prev.spaceComplexity,
         spaceComplexity: suggestions.spaceComplexity || prev.spaceComplexity,
         approach: suggestions.suggestedApproach || prev.approach,
         notes: prev.notes
@@ -222,18 +222,11 @@ export default function ProblemModal({ open, onClose, editProblem = null, initia
               </div>
               
               <div className="relative">
-                <textarea 
-                  rows="4" 
-                  className="input-field resize-none py-3 bg-brand-500/[0.01] dark:bg-brand-500/[0.02] border-brand-500/10 focus:border-brand-500/30" 
-                  placeholder="Explain the intuition and logical steps to solve..."
+                <MarkdownEditor 
                   value={formData.approach} 
                   onChange={e => setFormData({...formData, approach: e.target.value})} 
+                  placeholder="Explain the intuition and logical steps to solve..."
                 />
-                {!formData.approach && !isAiLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-                    <span className="text-xs italic">Use "Fill with AI" to generate a revision-ready approach</span>
-                  </div>
-                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

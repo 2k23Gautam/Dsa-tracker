@@ -18,7 +18,7 @@ export default function AllProblems() {
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         const matchesName = p.name.toLowerCase().includes(q);
-        const matchesId = p.id.toLowerCase().includes(q);
+        const matchesId = (p.id || p._id || '').toString().toLowerCase().includes(q);
         if (!matchesName && !matchesId) return false;
       }
       
@@ -36,6 +36,11 @@ export default function AllProblems() {
         const pDate = new Date(p.dateSolved);
         const sDate = new Date(filters.dateRange.start);
         if (pDate < sDate) return false;
+      }
+      if (filters.dateRange.end) {
+        const pDate = new Date(p.dateSolved);
+        const eDate = new Date(filters.dateRange.end);
+        if (pDate > eDate) return false;
       }
       return true;
     }).sort((a, b) => {

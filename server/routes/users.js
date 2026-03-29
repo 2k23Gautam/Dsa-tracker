@@ -45,7 +45,9 @@ router.post('/update-handles', auth, async (req, res) => {
     if (codeforcesHandle !== undefined) user.codeforcesHandle = codeforcesHandle;
     
     await user.save();
-    res.json({ message: 'Handles updated', user });
+    const cleanUser = user.toObject();
+    delete cleanUser.password;
+    res.json({ message: 'Handles updated', user: cleanUser });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -96,7 +98,7 @@ router.get('/search', auth, async (req, res) => {
 // @access  Private
 router.get('/profile/:userId', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId).select('name email');
+    const user = await User.findById(req.params.userId).select('name email profileImage');
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const problems = await Problem.find({ user: req.params.userId });

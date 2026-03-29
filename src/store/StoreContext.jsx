@@ -195,6 +195,12 @@ export function StoreProvider({ children }) {
   });
   const [lastSyncTime, setLastSyncTime] = useState(0);
   const isSyncingRef = useRef(false);
+  const lastSyncAtRef = useRef(0); // hard throttle for syncAllPlatformStats
+  // Use a ref so syncAllPlatformStats can read current values without being in its own deps
+  const authUserRef = useRef(authUser);
+  const tokenRef = useRef(token);
+  useEffect(() => { authUserRef.current = authUser; }, [authUser]);
+  useEffect(() => { tokenRef.current = token; }, [token]);
 
   useEffect(() => {
     localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissedSlugs));
@@ -301,31 +307,35 @@ export function StoreProvider({ children }) {
     });
   }, [rawAllSubmissions, problems, dismissedSlugs]);
 
+  // ─── syncAllPlatformStats ─────────────────────────────────────────────────
+  // IMPORTANT: uses refs for authUser/token to avoid being recreated when
+  // updateAuthUser() is called — which was causing an infinite sync loop.
   const syncAllPlatformStats = useCallback(async () => {
-    if (!token || isSyncingRef.current) return;
-    
-    // throttle if ran in last 2 minutes, unless forced (though we don't have force here yet)
-    // but the interval is 5min anyway.
-    
+    const tok = tokenRef.current;
+    const user = authUserRef.current;
+    if (!tok || isSyncingRef.current) return;
+
+    // Hard throttle: only sync at most once every 5 minutes
+    const now = Date.now();
+    if (now - lastSyncAtRef.current < 5 * 60 * 1000) return;
+
     isSyncingRef.current = true;
+    lastSyncAtRef.current = now;
     try {
-      // Automated sync for LeetCode (keeps the existing dedicated sync if desired)
-      if (authUser?.leetcodeUsername) {
-        const res = await fetch(`/api/leetcode/stats/${authUser.leetcodeUsername}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+      if (user?.leetcodeUsername) {
+        const res = await fetch(`/api/leetcode/stats/${user.leetcodeUsername}`, {
+          headers: { 'Authorization': `Bearer ${tok}` }
         });
         if (res.ok) {
           const stats = await res.json();
           const syncRes = await fetch('/api/leetcode/sync', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ leetcodeUsername: authUser.leetcodeUsername, stats })
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tok}` },
+            body: JSON.stringify({ leetcodeUsername: user.leetcodeUsername, stats })
           });
           if (syncRes.ok) {
             const data = await syncRes.json();
-            if (data.user) {
-              updateAuthUser(data.user);
-            }
+            if (data.user) updateAuthUser(data.user);
           }
         }
       }
@@ -334,7 +344,7 @@ export function StoreProvider({ children }) {
     } finally {
       isSyncingRef.current = false;
     }
-  }, [token, authUser]);
+  }, [updateAuthUser]); // stable dep — updateAuthUser is useCallback with []
 
   useEffect(() => {
     if (token) {
