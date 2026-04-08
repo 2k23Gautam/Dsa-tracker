@@ -2,121 +2,158 @@ const axios = require('axios');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 /**
- * Suggest metadata for a DSA problem based on the problem name/link
- * and (most importantly) the user's submitted solution code.
+ * Suggest metadata for a DSA problem based on the problem name/link,
+ * the problem statement (if fetched), and the user's submitted solution code.
+ *
+ * @param {string} problemInput  - Problem name or link (fallback identifier)
+ * @param {string} solutionCode  - User's solution code
+ * @param {string} problemStatement - Full problem statement text (optional)
  */
-async function suggestProblemMetadata(problemInput, solutionCode = "") {
-  const geminiKey = process.env.GEMINI_API_KEY;
+async function suggestProblemMetadata(problemInput, solutionCode = "", problemStatement = "") {
   const groqKey = process.env.GROQ_API_KEY;
 
-  if (!geminiKey && !groqKey) {
-    throw new Error("Neither GEMINI_API_KEY nor GROQ_API_KEY is configured in .env");
+  if (!groqKey) {
+    throw new Error("GROQ_API_KEY is not configured in .env");
   }
 
   const hasSolution = solutionCode && solutionCode.trim().length > 0;
+  const hasStatement = problemStatement && problemStatement.trim().length > 0;
   const hasContext = problemInput && problemInput !== 'Unknown Problem';
 
-  // Build a clean, minimal, unambiguous prompt
-  const prompt = `You are a senior DSA (Data Structures & Algorithms) expert. Your job is to analyze the following and return a JSON object.
+  const prompt = `You are a world-class DSA (Data Structures & Algorithms) coach and competitive programmer. Your task is to analyze the given information and return a precise JSON object.
 
-${hasContext ? `Problem: "${problemInput}"` : ''}
-${hasSolution ? `\nUser's Solution Code:\n\`\`\`\n${solutionCode.trim()}\n\`\`\`` : ''}
+${hasStatement ? `## Problem Statement\n${problemStatement.trim()}` : hasContext ? `## Problem\n"${problemInput}"` : ''}
 
-Instructions:
-- topics: List the relevant DSA topics from the code/problem (e.g. "Array", "String", "Tree", "Graph", "DP", "Heap", "Stack", "Linked List", "Binary Search", "Math").
-- patterns: List the algorithmic patterns used (e.g. "Two Pointers", "Sliding Window", "DFS", "BFS", "Binary Search", "Greedy", "Hashing", "Backtracking", "Recursion + Memoization").
-- difficulty: The problem difficulty ("Easy", "Medium", or "Hard").
-- timeComplexity: ${hasSolution ? "Based ONLY on the provided code logic (not the optimal solution)." : "The time complexity of the standard approach."}
-- spaceComplexity: ${hasSolution ? "Based ONLY on the provided code logic (not the optimal solution)." : "The space complexity of the standard approach."}
-- suggestedApproach: ${hasSolution ? "A 2-3 sentence plain English explanation of how the provided code works. NO numbered lists, NO bullet points, NO newlines — write as a single flowing paragraph." : "A brief 2-3 sentence explanation of the best approach to solve this problem. NO lists, NO numbers, single flowing paragraph."}
+${hasSolution ? `## User's Solution Code\n\`\`\`\n${solutionCode.trim()}\n\`\`\`` : ''}
 
-Respond with ONLY a raw JSON object (no markdown, no \`\`\`, no extra text):
+## Your Task
+Analyze BOTH the problem statement and the user's solution code. Extract the following fields cleanly to be used by the student for revision.
+
+- **topics**: List the core DSA topics this problem tests (array of strings, e.g. ["Array"]).
+- **patterns**: List the key algorithmic patterns (array of strings, e.g. ["Two Pointers"]).
+- **difficulty**: "Easy", "Medium", or "Hard".
+- **timeComplexity**: Strictly Big-O notation, e.g. "O(n)".
+- **spaceComplexity**: Strictly Big-O notation, e.g. "O(1)".
+- **suggestedApproach**: A detailed, highly-structured markdown explanation. Ensure the output feels modern and premium by using blockquotes (\`>\`) for the main intuition, numbered lists with bolded action names, horizontal rules (\`---\`) for sectioning, and a clean Markdown Table for the Complexity breakdown. You MUST output this EXACT visually advanced layout:
+
+## Output Format
+You MUST structure your response EXACTLY like this (JSON first, then the Markdown approach between delimiters):
+
 {
   "topics": ["Array"],
   "difficulty": "Medium",
   "patterns": ["Two Pointers"],
   "timeComplexity": "O(n)",
-  "spaceComplexity": "O(1)",
-  "suggestedApproach": "Plain english explanation here."
-}`;
+  "spaceComplexity": "O(1)"
+}
+===APPROACH_START===
+> ### Core Intuition
+> [Write an insightful 2-3 sentence summary of the core logic doing the heavy lifting]
 
-  // Try Gemini models in order
-  if (geminiKey) {
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    const modelsToTry = [
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash",
+---
+
+### Step-by-Step Execution
+
+1. **[Action Name]:** [Detailed step explanation...]
+2. **[Action Name]:** [Detailed step explanation...]
+
+---
+
+### Identifying Patterns
+
+- **Algorithmic Pattern:** \`[Pattern 1]\`
+- **Core Topics:** \`[Topic 1]\`, \`[Topic 2]\`
+
+---
+
+### Complexity Analysis
+
+| Type | Big-O | Explanation |
+| :--- | :--- | :--- |
+| **Time** | **\`O(n)\`** | [1-sentence reason, e.g., Single pass through the array] |
+| **Space** | **\`O(1)\`** | [1-sentence reason, e.g., Only constant extra variables used] |
+===APPROACH_END===
+`;
+
+  // ─── Try Groq (llama-3.3-70b-versatile) ───────────────
+  if (groqKey) {
+    const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+    
+    const groqModels = [
+      "llama-3.3-70b-versatile",
+      "mixtral-8x7b-32768"
     ];
 
-    for (const modelName of modelsToTry) {
+    let lastError = "Unknown error";
+    for (const MODEL of groqModels) {
       try {
-        console.log(`[AI] Trying ${modelName}...`);
-        const model = genAI.getGenerativeModel({ model: modelName });
-
-        const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: "application/json",
+        console.log(`[AI] Trying Groq ${MODEL}...`);
+        const response = await axios.post(
+          GROQ_URL,
+          {
+            model: MODEL,
+            messages: [
+              {
+                role: "system",
+                content: "You are a world-class DSA expert. Follow the exact requested format delimited by ===APPROACH_START===."
+              },
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            temperature: 0.2,
+            max_tokens: 1500
+          },
+          {
+            headers: {
+              "Authorization": `Bearer ${groqKey}`,
+              "Content-Type": "application/json"
+            },
+            timeout: 20000
           }
-        });
+        );
 
-        const text = result.response.text();
-        console.log(`[AI] Raw response from ${modelName}:`, text.substring(0, 300));
+        const text = response.data?.choices?.[0]?.message?.content;
+        console.log(`[AI] Groq (${MODEL}) response received.`);
         return parseAiResponse(text);
       } catch (err) {
-        console.warn(`[AI] ${modelName} failed:`, err.message);
-        if (modelName === modelsToTry[modelsToTry.length - 1] && !groqKey) {
-          throw err;
+        lastError = err.response?.data?.error?.message || err.message;
+        console.warn(`[AI] Groq ${MODEL} failed:`, lastError);
+        // If it's a hard error like 404 or missing model, we can continue to fallback
+        if (!lastError.includes('rate_limit') && !lastError.includes('model') && !lastError.includes('404')) {
+          break;
         }
       }
     }
-    console.log("[AI] All Gemini models failed. Falling back to Groq...");
-  }
-
-  // Fallback to Groq
-  if (groqKey) {
-    const API_URL = "https://api.groq.com/openai/v1/chat/completions";
-    const MODEL = "llama-3.3-70b-versatile";
-
-    try {
-      console.log("[AI] Trying Groq...");
-      const response = await axios.post(
-        API_URL,
-        {
-          model: MODEL,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.1,
-          response_format: { type: "json_object" }
-        },
-        {
-          headers: {
-            "Authorization": `Bearer ${groqKey}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
-      const text = response.data?.choices?.[0]?.message?.content;
-      console.log("[AI] Raw Groq response:", text?.substring(0, 300));
-      return parseAiResponse(text);
-    } catch (err) {
-      const errorMsg = err.response?.data?.error?.message || err.message;
-      throw new Error(`AI extraction failed (Groq): ${errorMsg}`);
-    }
+    console.log(`[AI] All Groq models failed. Last error: ${lastError}`);
+    throw new Error(`AI Request Failed: ${lastError}`);
   }
 }
 
 /**
- * Parse and sanitize the AI JSON response
+ * Parse and sanitize the AI response
  */
 function parseAiResponse(text) {
   if (!text) throw new Error("Empty response from AI");
 
-  // Strip markdown code fences if present
-  const jsonStr = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-  const raw = JSON.parse(jsonStr);
+  let jsonPart = text;
+  let approachPart = "";
+
+  if (text.includes("===APPROACH_START===")) {
+    const parts = text.split("===APPROACH_START===");
+    jsonPart = parts[0];
+    approachPart = parts[1].replace("===APPROACH_END===", "").trim();
+  }
+
+  // Strip markdown code fences if present around the JSON
+  const jsonStr = jsonPart.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+  let raw = {};
+  try {
+    raw = JSON.parse(jsonStr);
+  } catch (e) {
+    throw new Error("AI output was not valid JSON: " + e.message);
+  }
 
   // Helper to get a field by multiple possible key names (case-insensitive)
   const get = (keys) => {
@@ -128,13 +165,6 @@ function parseAiResponse(text) {
     return null;
   };
 
-  // Sanitize approach: remove numbered lists, bullets, and collapse to one line
-  let approach = get(['suggestedApproach', 'approach', 'suggested_approach']) || "";
-  if (Array.isArray(approach)) approach = approach.join(' ');
-  approach = approach.replace(/^\s*\d+[.)]\s*/gm, '');  // Remove "1. " "2) "
-  approach = approach.replace(/^\s*[-*•]\s*/gm, '');     // Remove "- " "* "
-  approach = approach.replace(/\n+/g, ' ');              // No newlines
-  approach = approach.replace(/\s{2,}/g, ' ').trim();    // Normalize spaces
 
   // Sanitize arrays
   const toArray = (val) => {
@@ -150,7 +180,7 @@ function parseAiResponse(text) {
     difficulty: get(['difficulty']) || "",
     timeComplexity: get(['timeComplexity', 'time_complexity']) || "",
     spaceComplexity: get(['spaceComplexity', 'space_complexity']) || "",
-    suggestedApproach: approach
+    suggestedApproach: approachPart || get(['suggestedApproach', 'approach', 'suggested_approach']) || ""
   };
 }
 

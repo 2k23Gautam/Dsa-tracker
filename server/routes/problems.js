@@ -24,7 +24,6 @@ const auth = (req, res, next) => {
 router.get('/', auth, async (req, res) => {
   try {
     const problems = await Problem.find({ user: req.user.id }).sort({ createdAt: -1 });
-    // Transform _id to id so frontend logic matches completely out of the box
     const formatted = problems.map(p => {
       const obj = p.toObject();
       obj.id = obj._id.toString();
@@ -103,17 +102,137 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// AI Metadata Suggestion
+// ─── Fetch Problem Statement from LeetCode or Codeforces ────────────────────────────────────
+// @route  POST /api/problems/fetch-statement
+// @desc   Fetch the problem statement text
+// @access Private
+router.post('/fetch-statement', auth, async (req, res) => {
+  const { link } = req.body;
+  if (!link) return res.status(400).json({ message: 'Link is required' });
+
+  const lcMatch = link.match(/leetcode\.com\/problems\/([\w-]+)/i);
+  const isCodeforces = /codeforces\.com\/(contest|problemset)\//i.test(link);
+
+  if (!lcMatch && !isCodeforces) {
+    return res.status(400).json({ message: 'Not a valid LeetCode or Codeforces URL' });
+  }
+
+  if (lcMatch) {
+    const slug = lcMatch[1];
+    const query = `
+      query getQuestionDetail($titleSlug: String!) {
+        question(titleSlug: $titleSlug) {
+          title
+          titleSlug
+          difficulty
+          content
+          topicTags {
+            name
+          }
+        }
+      }
+    `;
+
+    try {
+      console.log(`[LC Fetch] Fetching problem statement for: ${slug}`);
+      // Use dynamic import for node-fetch if global fetch is not available, but 'fetch' is native in Node 18+
+      const response = await fetch('https://leetcode.com/graphql/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Referer': 'https://leetcode.com',
+          'User-Agent': 'Mozilla/5.0'
+        },
+        body: JSON.stringify({ query, variables: { titleSlug: slug } }),
+      });
+
+      if (!response.ok) throw new Error(`LeetCode API returned ${response.status}`);
+      const data = await response.json();
+
+      if (data.errors || !data.data?.question) {
+        return res.status(404).json({ message: 'Problem not found on LeetCode' });
+      }
+
+      const q = data.data.question;
+      const plainText = (q.content || '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+        .replace(/\s{2,}/g, ' ').trim();
+
+      return res.json({
+        title: q.title,
+        difficulty: q.difficulty,
+        statement: plainText,
+        topicTags: (q.topicTags || []).map(t => t.name)
+      });
+    } catch (err) {
+      console.error('[LC Fetch] Error:', err.message);
+      return res.status(500).json({ message: `Failed to fetch from LeetCode` });
+    }
+  } else if (isCodeforces) {
+    try {
+      console.log(`[CF Fetch] Fetching problem statement for: ${link}`);
+      const response = await fetch(link, {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
+      if (!response.ok) throw new Error(`Codeforces returned ${response.status}`);
+      
+      const html = await response.text();
+      
+      // Try to isolate the problem statement div to avoid sidebar noise
+      const match = html.match(/<div[^>]*class="problem-statement"[^>]*>([\s\S]*?)<\/div>\s*<script/i) || 
+                    html.match(/<div[^>]*class="problem-statement"[^>]*>([\s\S]*?)<div class="test-example-line/i) ||
+                    html.match(/<div[^>]*class="problem-statement"[^>]*>([\s\S]*?)<\/div>(?:<br|<div)/i);
+                    
+      let bodyHtml = match ? match[1] : html;
+
+      // Extract title if possible
+      let title = "Codeforces Problem";
+      const titleMatch = bodyHtml.match(/<div class="title">([^<]+)<\/div>/i);
+      if (titleMatch) title = titleMatch[1].replace(/^[A-Z]\.\s*/, '').trim();
+
+      const plainText = bodyHtml
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+        .replace(/\$\$\$([^\$]+)\$\$\$/g, '$1') // Simple mathjax unwrap
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
+      console.log(`[CF Fetch] Got statement for "${title}" (${plainText.length} chars)`);
+
+      return res.json({
+        title: title,
+        difficulty: 'Medium', // CF doesn't provide easy string difficulties directly
+        statement: plainText.substring(0, 8000), // AI prompt limit safety
+        topicTags: []
+      });
+    } catch (err) {
+      console.error('[CF Fetch] Error:', err.message);
+      return res.status(500).json({ message: `Failed to fetch from Codeforces` });
+    }
+  }
+});
+
+// ─── AI Metadata Suggestion ────────────────────────────────────────────────────
+// @route  POST /api/problems/ai-suggest
+// @desc   Use AI to suggest metadata from problem + solution
+// @access Private
 router.post('/ai-suggest', auth, async (req, res) => {
   try {
-    const { name, link, solutionCode } = req.body;
+    const { name, link, solutionCode, problemStatement } = req.body;
     const input = link || name || 'Unknown Problem';
 
     if (!solutionCode && !name && !link) {
       return res.status(400).json({ message: 'Provide at least a problem name, link, or solution code.' });
     }
 
-    const metadata = await suggestProblemMetadata(input, solutionCode);
+    console.log(`[AI Suggest] Problem: "${input}", Has statement: ${!!problemStatement}, Has code: ${!!solutionCode}`);
+
+    const metadata = await suggestProblemMetadata(input, solutionCode, problemStatement);
     console.log('[AI Result]', JSON.stringify(metadata, null, 2));
     res.json(metadata);
   } catch (err) {
