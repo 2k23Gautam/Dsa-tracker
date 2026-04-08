@@ -31,7 +31,7 @@ if (process.env.MONGO_URI) {
   console.log('Provide MONGO_URI in .env to connect to the database.');
 }
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 
 // Update to serve frontend in production
 const distPath = path.join(__dirname, '../dist');
