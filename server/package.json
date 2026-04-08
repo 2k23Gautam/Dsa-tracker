@@ -2,6 +2,7 @@
   "name": "dsa-tracker-server",
   "version": "1.0.0",
   "description": "Express/MongoDB backend for DSA Tracker",
+  "type": "commonjs",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
